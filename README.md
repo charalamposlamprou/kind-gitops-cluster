@@ -60,6 +60,27 @@ kubectl get applications -n argocd
 # root-app           Synced   Healthy
 ```
 
+### 🌐 Quick Access to Applications
+
+```bash
+# Get all application URLs instantly
+make urls
+```
+
+**Output:**
+```
+📱 Application URLs (via LoadBalancer):
+
+   🚀 Demo App:    http://demo.127.0.0.1.nip.io:63404
+   📊 Grafana:     http://grafana.127.0.0.1.nip.io:63404  (admin/admin)
+   📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:63404
+   🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:63404
+```
+
+**No DNS configuration needed!** The apps use `*.127.0.0.1.nip.io` domains which work automatically without editing `/etc/hosts`.
+
+> 💡 **Multiple access methods available:** See [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md) for 5 different ways to access your apps (port-forward, NodePort, hostPort, etc.)
+
 ## 🏗️ Architecture
 
 ### GitOps App-of-Apps Pattern
@@ -124,6 +145,9 @@ root-app (bootstrap/root-application.yaml)
 │   └── samples/
 │       └── demo-nginx-app/      # Example nginx deployment
 │
+├── docs/
+│   └── ACCESSING-APPS.md        # Comprehensive guide: 5 ways to access apps
+│
 ├── Makefile                      # Lifecycle automation
 └── README.md                     # This file
 ```
@@ -149,6 +173,9 @@ make bootstrap
 # Deploy/sync all applications
 make apps-install
 
+# Get all application URLs (no /etc/hosts needed!)
+make urls
+
 # Get Argo CD admin password
 make argocd-password
 
@@ -171,54 +198,55 @@ make cloud-provider-restart
 
 ## 🌐 Accessing Services
 
-### Argo CD Web UI
+### Quick Access (Easiest Method) ✅
+
+**Get all URLs with one command:**
 
 ```bash
-# Get the dynamically assigned port
-kubectl get svc argocd-server -n argocd
-
-# Or use port-forward
-kubectl port-forward svc/argocd-server -n argocd 8080:443
-
-# Open browser: https://localhost:8080
-# Username: admin
-# Password: (run `make argocd-password`)
+make urls
 ```
 
-### Grafana Dashboard
+This shows URLs for all services using **nip.io DNS** (no `/etc/hosts` editing required!):
 
-```bash
-# Access via LoadBalancer ingress (if DNS configured)
-# http://grafana.127.0.0.1.nip.io
+```
+📱 Application URLs (via LoadBalancer):
 
-# Or use port-forward
-kubectl port-forward svc/monitoring-grafana -n monitoring 3000:80
-
-# Open browser: http://localhost:3000
-# Username: admin
-# Password: admin
+   🚀 Demo App:    http://demo.127.0.0.1.nip.io:63404
+   📊 Grafana:     http://grafana.127.0.0.1.nip.io:63404  (admin/admin)
+   📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:63404
+   🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:63404
 ```
 
-### Prometheus
+**Just copy/paste the URLs into your browser!** 🎉
+
+> **Note:** The port number changes when you recreate the cluster. Just run `make urls` again to get the current URLs.
+
+### Alternative Access Methods
+
+Prefer different access methods? We have you covered!
+
+📖 **See [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md)** for comprehensive guide with 5 different methods:
+
+1. **nip.io DNS** (current, easiest) - already configured, no setup
+2. **kubectl port-forward** - quick testing, standard ports
+3. **NodePort + fixed ports** - production-like, ports 80/443
+4. **hostPort + DaemonSet** - advanced, direct node binding
+5. **LoadBalancer IP** - current cloud-provider-kind setup
+
+**Quick port-forward examples:**
 
 ```bash
-# Access via LoadBalancer ingress
-# http://prometheus.127.0.0.1.nip.io
+# Grafana
+kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
+# Access: http://localhost:3000 (admin/admin)
 
-# Or use port-forward
-kubectl port-forward svc/monitoring-kube-prometheus-prometheus -n monitoring 9090:9090
+# Prometheus
+kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090
+# Access: http://localhost:9090
 
-# Open browser: http://localhost:9090
-```
-
-### Demo Nginx App
-
-```bash
-# Access via LoadBalancer ingress
-# http://demo.127.0.0.1.nip.io
-
-# Or check the service
-kubectl get svc -n apps
+# Argo CD
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+# Access: https://localhost:8080 (admin/<password from make argocd-password>)
 ```
 
 ## ➕ Adding New Applications

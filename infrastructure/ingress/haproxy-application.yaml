@@ -16,10 +16,7 @@ spec:
       releaseName: haproxy
       values: |
         controller:
-          ingressClass:
-            enabled: true
-            name: haproxy
-            isDefaultClass: false
+            ingressClass: haproxy
           service:
             type: LoadBalancer
   syncPolicy:

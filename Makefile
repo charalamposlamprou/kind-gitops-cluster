@@ -10,7 +10,7 @@ COMPOSE_FILE ?= infrastructure/cloud-provider/compose.yaml
 
 .DEFAULT_GOAL := help
 
-.PHONY: help cluster-up cluster-down bootstrap apps-install cloud-provider-up cloud-provider-down argocd-password argocd-status
+.PHONY: help cluster-up cluster-down bootstrap apps-install cloud-provider-up cloud-provider-down cloud-provider-wait argocd-password argocd-status
 
 help:
 	@echo "GitOps lifecycle commands"
@@ -26,7 +26,11 @@ cluster-up:
 		echo "Creating kind cluster '$(CLUSTER_NAME)'"; \
 		kind create cluster --name "$(CLUSTER_NAME)" --config "$(KIND_CONFIG)"; \
 	fi
+	@$(MAKE) cloud-provider-down
 	@$(MAKE) cloud-provider-up
+	@$(MAKE) cloud-provider-wait
+	@echo "cloud-provider-kind is ready."
+	@echo "Envoy container is created only after a LoadBalancer service exists (e.g. after bootstrap/apps sync)."
 
 cloud-provider-up:
 	@if [ "$(CONTAINER_RUNTIME)" = "none" ]; then \
@@ -37,6 +41,27 @@ cloud-provider-up:
 		docker compose -f "$(COMPOSE_FILE)" up -d; \
 	elif [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
 		podman compose -f "$(COMPOSE_FILE)" up -d || podman-compose -f "$(COMPOSE_FILE)" up -d; \
+	fi
+
+cloud-provider-wait:
+	@if [ "$(CONTAINER_RUNTIME)" = "docker" ]; then \
+		for i in $$(seq 1 30); do \
+			if docker logs kind-cloud-provider 2>&1 | grep -q "Starting service controller"; then \
+				exit 0; \
+			fi; \
+			sleep 2; \
+		done; \
+		echo "cloud-provider-kind did not become ready in time"; \
+		exit 1; \
+	elif [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
+		for i in $$(seq 1 30); do \
+			if podman logs kind-cloud-provider 2>&1 | grep -q "Starting service controller"; then \
+				exit 0; \
+			fi; \
+			sleep 2; \
+		done; \
+		echo "cloud-provider-kind did not become ready in time"; \
+		exit 1; \
 	fi
 
 bootstrap:

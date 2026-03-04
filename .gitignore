@@ -1,0 +1,8 @@
+.vscode
+podman.identity
+podman.url
+.DS_Store
+.idea
+nohup.out
+cloud-provider-kind
+.github

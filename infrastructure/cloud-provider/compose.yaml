@@ -1,0 +1,11 @@
+services:
+  cloud-provider-kind:
+    image: registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.7.0
+    container_name: kind-cloud-provider
+    command:
+      - /cloud-provider-kind
+      - --enable-lb-port-mapping
+    restart: unless-stopped
+    network_mode: kind
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

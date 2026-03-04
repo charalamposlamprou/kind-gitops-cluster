@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-haproxy
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: networking
+  source:
+    repoURL: https://haproxytech.github.io/helm-charts
+    chart: kubernetes-ingress
+    targetRevision: 1.46.0
+    helm:
+      releaseName: haproxy
+      values: |
+        controller:
+          ingressClass: haproxy
+          # Use hostPort to bind directly to node ports
+          daemonset:
+            useHostPort: true
+          # Optional: use DaemonSet instead of Deployment for per-node deployment
+          kind: DaemonSet
+          # Disable LoadBalancer service since we're using hostPort
+          service:
+            type: ClusterIP
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -10,7 +10,7 @@ COMPOSE_FILE ?= infrastructure/cloud-provider/compose.yaml
 
 .DEFAULT_GOAL := help
 
-.PHONY: help cluster-up cluster-down bootstrap apps-install cloud-provider-up cloud-provider-down cloud-provider-wait argocd-password argocd-status
+.PHONY: help cluster-up cluster-down bootstrap apps-install cloud-provider-up cloud-provider-down cloud-provider-wait argocd-password argocd-status urls
 
 help:
 	@echo "GitOps lifecycle commands"
@@ -18,6 +18,9 @@ help:
 	@echo "  make cluster-down    - Stop cloud-provider-kind + delete cluster"
 	@echo "  make bootstrap       - Initial Argo CD bootstrap (only imperative apply)"
 	@echo "  make apps-install    - Refresh root App-of-Apps and show app status"
+	@echo "  make urls            - Show all application URLs"
+	@echo "  make argocd-password - Get Argo CD admin password"
+	@echo "  make argocd-status   - Show Argo CD application status"
 
 cluster-up:
 	@if kind get clusters | grep -qx "$(CLUSTER_NAME)"; then \
@@ -96,3 +99,19 @@ cloud-provider-down:
 cluster-down:
 	@$(MAKE) cloud-provider-down
 	@kind delete cluster --name "$(CLUSTER_NAME)"
+
+urls:
+	@ENVOY_PORT=$$($(CONTAINER_RUNTIME) port $$($(CONTAINER_RUNTIME) ps -q --filter "ancestor=envoyproxy/envoy:v1.33.2") 80/tcp 2>/dev/null | cut -d':' -f2) && \
+	if [ -z "$$ENVOY_PORT" ]; then \
+		echo "⚠️  Envoy proxy not found. LoadBalancer services may not be ready yet."; \
+		echo "Run 'make apps-install' and wait for apps to sync, then try again."; \
+		exit 1; \
+	fi && \
+	echo "📱 Application URLs (via LoadBalancer):" && \
+	echo "" && \
+	echo "   🚀 Demo App:    http://demo.127.0.0.1.nip.io:$$ENVOY_PORT" && \
+	echo "   📊 Grafana:     http://grafana.127.0.0.1.nip.io:$$ENVOY_PORT  (admin/admin)" && \
+	echo "   📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:$$ENVOY_PORT" && \
+	echo "   🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:$$ENVOY_PORT   (admin/$$PASSWORD)" && \
+	echo "" && \
+	echo "💡 Tip: Run 'make argocd-password' to get the Argo CD password"

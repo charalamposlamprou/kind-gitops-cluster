@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-haproxy
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: networking
+  source:
+    repoURL: https://haproxytech.github.io/helm-charts
+    chart: kubernetes-ingress
+    targetRevision: 1.46.0
+    helm:
+      releaseName: haproxy
+      values: |
+        controller:
+          ingressClass: haproxy
+          service:
+            type: NodePort
+            nodePorts:
+              http: 30080
+              https: 30443
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

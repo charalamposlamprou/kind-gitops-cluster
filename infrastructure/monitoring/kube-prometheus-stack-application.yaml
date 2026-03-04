@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: monitoring-stack
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
   destination:
@@ -13,6 +15,7 @@ spec:
     chart: kube-prometheus-stack
     targetRevision: 70.0.0
     helm:
+      skipCrds: true
       releaseName: monitoring
       values: |
         grafana:

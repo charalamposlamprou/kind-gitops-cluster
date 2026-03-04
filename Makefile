@@ -10,7 +10,7 @@ COMPOSE_FILE ?= infrastructure/cloud-provider/compose.yaml
 
 .DEFAULT_GOAL := help
 
-.PHONY: help cluster-up cluster-down bootstrap apps-install cloud-provider-up cloud-provider-down cloud-provider-wait argocd-password argocd-status urls
+.PHONY: help cluster-up cluster-down bootstrap apps-install cloud-provider-up cloud-provider-down cloud-provider-wait argocd-password argocd-status urls test-ingress
 
 help:
 	@echo "GitOps lifecycle commands"
@@ -19,6 +19,7 @@ help:
 	@echo "  make bootstrap       - Initial Argo CD bootstrap (only imperative apply)"
 	@echo "  make apps-install    - Refresh root App-of-Apps and show app status"
 	@echo "  make urls            - Show all application URLs"
+	@echo "  make test-ingress    - Test all ingress routes via LoadBalancer"
 	@echo "  make argocd-password - Get Argo CD admin password"
 	@echo "  make argocd-status   - Show Argo CD application status"
 
@@ -115,3 +116,6 @@ urls:
 	echo "   🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:$$ENVOY_PORT   (admin/$$PASSWORD)" && \
 	echo "" && \
 	echo "💡 Tip: Run 'make argocd-password' to get the Argo CD password"
+
+test-ingress:
+	@./scripts/test-ingress.sh

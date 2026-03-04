@@ -249,6 +249,169 @@ kubectl port-forward -n argocd svc/argocd-server 8080:443
 # Access: https://localhost:8080 (admin/<password from make argocd-password>)
 ```
 
+## 🧪 Testing LoadBalancer & Ingress
+
+This setup uses **cloud-provider-kind** to emulate cloud LoadBalancers (AWS ELB, GCP LB, Azure LB), providing a **production-like environment** locally.
+
+### Verify LoadBalancer Service
+
+```bash
+# Check HAProxy ingress controller has an EXTERNAL-IP
+kubectl get svc -n networking haproxy-kubernetes-ingress
+
+# Output should show:
+# NAME                          TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)
+# haproxy-kubernetes-ingress    LoadBalancer   10.96.104.30   172.18.0.7    80:31505/TCP,443:30409/TCP
+```
+
+**✅ If you see an EXTERNAL-IP** (e.g., `172.18.0.7`), LoadBalancer is working!
+
+**❌ If stuck on `<pending>`**, check cloud-provider-kind:
+
+```bash
+docker ps | grep cloud-provider
+# Should show: kind-cloud-provider container running
+
+# Check logs
+docker logs kind-cloud-provider
+
+# Restart if needed
+make cloud-provider-restart
+```
+
+### Test Ingress Rules with curl
+
+Verify ingress routing works correctly:
+
+```bash
+# Get the envoy proxy port (LoadBalancer frontend)
+ENVOY_PORT=$(docker port $(docker ps -q --filter "ancestor=envoyproxy/envoy:v1.33.2") 80/tcp | cut -d':' -f2)
+
+# Test demo app ingress
+curl -v http://demo.127.0.0.1.nip.io:${ENVOY_PORT}
+# Should return: nginx welcome page
+
+# Test Grafana ingress
+curl -v http://grafana.127.0.0.1.nip.io:${ENVOY_PORT}
+# Should return: Grafana login page (302 redirect)
+
+# Test Prometheus ingress
+curl -v http://prometheus.127.0.0.1.nip.io:${ENVOY_PORT}
+# Should return: Prometheus UI HTML
+
+# Test with Host header (alternative method)
+LB_IP=$(kubectl get svc -n networking haproxy-kubernetes-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+curl -H "Host: demo.127.0.0.1.nip.io" http://${LB_IP}
+```
+
+### Verify Ingress Resources
+
+```bash
+# List all ingress resources
+kubectl get ingress --all-namespaces
+
+# Example output:
+# NAMESPACE    NAME                  CLASS      HOSTS                           ADDRESS      PORTS
+# apps         ingress-a             haproxy    demo.127.0.0.1.nip.io          172.18.0.7   80
+# monitoring   ingress-monitoring    haproxy    grafana.127.0.0.1.nip.io       172.18.0.7   80
+#                                               prometheus.127.0.0.1.nip.io
+
+# Detailed view of specific ingress
+kubectl describe ingress -n apps ingress-a
+```
+
+### Test Complete Request Flow
+
+Verify the entire request path: **Browser → Envoy → HAProxy → Service → Pod**
+
+```bash
+# 1. Check envoy proxy is routing to HAProxy LoadBalancer
+docker port $(docker ps -q --filter "ancestor=envoyproxy/envoy:v1.33.2")
+
+# 2. Verify HAProxy ingress controller pods are running
+kubectl get pods -n networking
+
+# 3. Check backend service endpoints
+kubectl get endpoints -n apps service-a
+kubectl get endpoints -n monitoring monitoring-grafana
+
+# 4. Test end-to-end connectivity
+curl -I http://demo.127.0.0.1.nip.io:${ENVOY_PORT}
+# Should return: HTTP/1.1 200 OK
+
+# 5. Verify ingress logs (optional)
+kubectl logs -n networking -l app.kubernetes.io/name=kubernetes-ingress --tail=50
+```
+
+### Understanding the LoadBalancer Flow
+
+```
+┌─────────────┐
+│   Browser   │
+│  (your Mac) │
+└──────┬──────┘
+       │ http://demo.127.0.0.1.nip.io:63404
+       ▼
+┌─────────────────────────────────────────┐
+│  Envoy Proxy (cloud-provider-kind)      │
+│  Docker container on host               │
+│  Maps: 0.0.0.0:63404 → 172.18.0.7:80   │
+└──────┬──────────────────────────────────┘
+       │ Forward to LoadBalancer IP
+       ▼
+┌─────────────────────────────────────────┐
+│  HAProxy Ingress Controller             │
+│  LoadBalancer: 172.18.0.7:80           │
+│  (inside Kind cluster)                  │
+└──────┬──────────────────────────────────┘
+       │ Route based on Host header
+       ▼
+┌─────────────────────────────────────────┐
+│  Backend Service (ClusterIP)            │
+│  service-a, monitoring-grafana, etc.    │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│  Application Pods                       │
+│  nginx, grafana, prometheus, etc.       │
+└─────────────────────────────────────────┘
+```
+
+**This mimics cloud environments** where:
+- **Envoy** = Cloud provider's edge router/load balancer
+- **HAProxy** = Application load balancer (ALB/NLB)
+- **Service** = Kubernetes service abstraction
+- **Pods** = Your application containers
+
+### Quick Test Script
+
+Create a quick test to verify all ingresses work:
+
+```bash
+#!/bin/bash
+ENVOY_PORT=$(docker port $(docker ps -q --filter "ancestor=envoyproxy/envoy:v1.33.2") 80/tcp | cut -d':' -f2)
+
+echo "Testing Ingress Routes via LoadBalancer..."
+echo ""
+
+echo "✓ Demo App:"
+curl -s -o /dev/null -w "%{http_code}" http://demo.127.0.0.1.nip.io:${ENVOY_PORT}
+echo ""
+
+echo "✓ Grafana:"
+curl -s -o /dev/null -w "%{http_code}" http://grafana.127.0.0.1.nip.io:${ENVOY_PORT}
+echo ""
+
+echo "✓ Prometheus:"
+curl -s -o /dev/null -w "%{http_code}" http://prometheus.127.0.0.1.nip.io:${ENVOY_PORT}
+echo ""
+
+echo "All ingresses tested! (200 = success, 302 = redirect to login)"
+```
+
+Save as `test-ingress.sh`, make executable (`chmod +x test-ingress.sh`), and run!
+
 ## ➕ Adding New Applications
 
 Adding a new application is **simple** - Argo CD will discover it automatically!

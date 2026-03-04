@@ -300,8 +300,8 @@ curl -v http://prometheus.127.0.0.1.nip.io:${ENVOY_PORT}
 # Should return: Prometheus UI HTML
 
 # Test with Host header (alternative method)
-LB_IP=$(kubectl get svc -n networking haproxy-kubernetes-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-curl -H "Host: demo.127.0.0.1.nip.io" http://${LB_IP}
+curl -H "Host: demo.127.0.0.1.nip.io" http://localhost:${ENVOY_PORT}
+# Should return: nginx welcome page
 ```
 
 ### Verify Ingress Resources

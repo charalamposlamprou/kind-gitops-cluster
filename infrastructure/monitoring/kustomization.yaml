@@ -3,6 +3,5 @@ kind: Kustomization
 
 resources:
   - monitoring-namespace.yaml
-  - crds.yaml
   - kube-prometheus-stack-application.yaml
   - ingress-monitoring.yaml

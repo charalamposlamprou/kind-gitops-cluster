@@ -12,8 +12,6 @@ spec:
     repoURL: __REPO_URL__
     targetRevision: __TARGET_REVISION__
     path: bootstrap/apps
-    directory:
-      recurse: true
   syncPolicy:
     automated:
       prune: true

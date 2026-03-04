@@ -42,6 +42,8 @@ cloud-provider-up:
 bootstrap:
 	@kubectl get nodes >/dev/null
 	@kubectl apply -k infrastructure/argocd/overlays/local
+	@kubectl patch configmap argocd-cmd-params-cm -n "$(ARGOCD_NAMESPACE)" \
+		--patch '{"data":{"server.insecure":"true"}}' --type merge || true
 	@kubectl -n "$(ARGOCD_NAMESPACE)" rollout status deploy/argocd-server --timeout=180s
 	@echo "Using GITOPS_REPO_URL=$(GITOPS_REPO_URL)"
 	@sed \

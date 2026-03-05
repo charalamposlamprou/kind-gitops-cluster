@@ -46,8 +46,8 @@ open "http://grafana.127.0.0.1.nip.io:${ENVOY_HTTP}"
 Add to your Makefile:
 
 ```makefile
-.PHONY: get-urls
-get-urls:
+.PHONY: urls
+urls:
 	@echo "=== Application URLs ==="
 	@ENVOY_PORT=$$(docker port $$(docker ps --filter "ancestor=envoyproxy/envoy:v1.33.2" -q) 80/tcp | cut -d':' -f2) && \
 	echo "Demo App:    http://demo.127.0.0.1.nip.io:$$ENVOY_PORT" && \
@@ -56,7 +56,7 @@ get-urls:
 	echo "Argo CD:     http://argocd.127.0.0.1.nip.io:$$ENVOY_PORT"
 ```
 
-Then just run: `make get-urls`
+Then just run: `make urls`
 
 ---
 
@@ -202,39 +202,36 @@ open http://demo.127.0.0.1.nip.io:8080
 
 ---
 
-## Option 5: Access via LoadBalancer IP (Current Method) 🔄
+## Option 5: Access via Envoy Proxy Port with Host Header 🔄
 
-This is what you're using now with cloud-provider-kind.
+Access apps through the envoy proxy port using curl with Host header.
 
-### Check the LoadBalancer IP:
+### Find the envoy proxy port:
 
 ```bash
-kubectl get svc -n networking haproxy-kubernetes-ingress
-# EXTERNAL-IP: 172.18.0.7
+docker port $(docker ps --filter "ancestor=envoyproxy/envoy:v1.33.2" -q) 80/tcp
+# Output: 0.0.0.0:49383
 ```
 
-### Access directly via IP:
+### Access using curl with Host header:
 
 ```bash
-# Add to /etc/hosts (one-time):
-# 172.18.0.7 demo.local grafana.local prometheus.local
-
-# Or use curl with Host header:
-curl -H "Host: demo.127.0.0.1.nip.io" http://172.18.0.7
-curl -H "Host: grafana.127.0.0.1.nip.io" http://172.18.0.7
-
-# Or access via envoy (current setup):
-# See Option 1
+# Use curl with the Host header to specify the hostname
+curl -H "Host: demo.127.0.0.1.nip.io" http://localhost:49383
+curl -H "Host: grafana.127.0.0.1.nip.io" http://localhost:49383
+curl -H "Host: prometheus.127.0.0.1.nip.io" http://localhost:49383
 ```
 
 **Pros:**
-- ✅ Production-like (mimics cloud LoadBalancers)
-- ✅ Tests full LoadBalancer flow
-- ✅ Isolated from host networking
+- ✅ Tests ingress host-based routing
+- ✅ Works without browser
+- ✅ Useful for automation/scripts
+- ✅ No need to modify /etc/hosts
 
 **Cons:**
-- ⚠️ IP may change on cluster recreation
-- ⚠️ Requires extra DNS/hosts setup
+- ⚠️ Port changes when cluster is recreated
+- ⚠️ Not convenient for browser access
+- ⚠️ Must specify Host header for each request
 
 ---
 
@@ -246,7 +243,7 @@ curl -H "Host: grafana.127.0.0.1.nip.io" http://172.18.0.7
 | **port-forward** | Standard | ❌ No | ❌ No | ❌ No | ⭐ Easy |
 | **NodePort** | Fixed | ✅ Any | ⚠️ Once | ✅ Yes | ⭐⭐ Medium |
 | **hostPort** | Fixed | ✅ Any | ⚠️ Once | ✅ Yes | ⭐⭐⭐ Advanced |
-| **LoadBalancer IP** | Standard | ⚠️ Manual | ❌ No | ✅ Yes | ⭐⭐ Medium |
+| **Host header (curl)** | Random | ❌ No | ❌ No | ✅ Yes | ⭐ Easy |
 
 ---
 

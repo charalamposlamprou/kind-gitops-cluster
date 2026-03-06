@@ -79,7 +79,7 @@ make urls
 
 **No DNS configuration needed!** The apps use `*.127.0.0.1.nip.io` domains which work automatically without editing `/etc/hosts`.
 
-> 💡 **Multiple access methods available:** See [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md) for 5 different ways to access your apps (port-forward, NodePort, hostPort, etc.)
+> 💡 **Want different access methods?** See [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md) for 5 complete approaches including port-forward, NodePort with fixed ports 80/443, and more.
 
 ## 🏗️ Architecture
 
@@ -221,19 +221,31 @@ This shows URLs for all services using **nip.io DNS** (no `/etc/hosts` editing r
 
 > **Note:** The port number changes when you recreate the cluster. Just run `make urls` again to get the current URLs.
 
-### Alternative Access Methods
+### 5 Different Ways to Access Your Apps
 
-Prefer different access methods? We have you covered!
+**Need a different access method?** We've got you covered with 5 complete options:
 
-📖 **See [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md)** for comprehensive guide with 5 different methods:
+📖 **See [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md)** for the comprehensive guide:
 
-1. **nip.io DNS** (current, easiest) - already configured, no setup
-2. **kubectl port-forward** - quick testing, standard ports
-3. **NodePort + fixed ports** - production-like, ports 80/443
-4. **hostPort + DaemonSet** - advanced, direct node binding
-5. **LoadBalancer IP** - current cloud-provider-kind setup
+1. **nip.io DNS** (✅ current) - Already configured! No setup needed, works immediately
+2. **kubectl port-forward** (🚀 quick testing) - Standard ports (3000, 9090, 8080), no config changes
+3. **NodePort + fixed ports** (🎯 production-like) - Use ports 80/443, predictable and stable
+4. **hostPort + DaemonSet** (🏃 advanced) - Direct node binding, high availability
+5. **Host header with curl** (🔄 automation) - Test ingress routing without browser
 
-**Quick port-forward examples:**
+**Comparison:**
+
+| Method | Ports | Setup | Ingress Testing | Best For |
+|--------|-------|-------|-----------------|----------|
+| nip.io | Random | None | ✅ Yes | Daily use (current) |
+| port-forward | Standard | None | ❌ No | Quick service testing |
+| NodePort | 80/443 | Cluster rebuild | ✅ Yes | Production-like setup |
+| hostPort | 80/443 | Cluster rebuild | ✅ Yes | Advanced scenarios |
+| Host header | Random | None | ✅ Yes | CI/CD & automation |
+
+### Quick Port-Forward Examples
+
+For quick testing without ingress:
 
 ```bash
 # Grafana
@@ -247,7 +259,13 @@ kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 909
 # Argo CD
 kubectl port-forward -n argocd svc/argocd-server 8080:443
 # Access: https://localhost:8080 (admin/<password from make argocd-password>)
+
+# Demo app
+kubectl port-forward -n apps svc/service-a 8081:80
+# Access: http://localhost:8081
 ```
+
+**💡 Tip:** For production-like environments with ports 80/443, see the NodePort configuration in [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md#option-3-nodeport--fixed-kind-port-mappings-).
 
 ## 🧪 Testing LoadBalancer & Ingress
 
@@ -299,7 +317,7 @@ curl -v http://grafana.127.0.0.1.nip.io:${ENVOY_PORT}
 curl -v http://prometheus.127.0.0.1.nip.io:${ENVOY_PORT}
 # Should return: Prometheus UI HTML
 
-# Test with Host header (alternative method)
+# Test with Host header (alternative - for automation/CI)
 curl -H "Host: demo.127.0.0.1.nip.io" http://localhost:${ENVOY_PORT}
 # Should return: nginx welcome page
 ```
@@ -320,30 +338,9 @@ kubectl get ingress --all-namespaces
 kubectl describe ingress -n apps ingress-a
 ```
 
-### Test Complete Request Flow
-
-Verify the entire request path: **Browser → Envoy → HAProxy → Service → Pod**
-
-```bash
-# 1. Check envoy proxy is routing to HAProxy LoadBalancer
-docker port $(docker ps -q --filter "ancestor=envoyproxy/envoy:v1.33.2")
-
-# 2. Verify HAProxy ingress controller pods are running
-kubectl get pods -n networking
-
-# 3. Check backend service endpoints
-kubectl get endpoints -n apps service-a
-kubectl get endpoints -n monitoring monitoring-grafana
-
-# 4. Test end-to-end connectivity
-curl -I http://demo.127.0.0.1.nip.io:${ENVOY_PORT}
-# Should return: HTTP/1.1 200 OK
-
-# 5. Verify ingress logs (optional)
-kubectl logs -n networking -l app.kubernetes.io/name=kubernetes-ingress --tail=50
-```
-
 ### Understanding the LoadBalancer Flow
+
+The complete request path: **Browser → Envoy → HAProxy → Service → Pod**
 
 ```
 ┌─────────────┐
@@ -384,33 +381,36 @@ kubectl logs -n networking -l app.kubernetes.io/name=kubernetes-ingress --tail=5
 - **Service** = Kubernetes service abstraction
 - **Pods** = Your application containers
 
-### Quick Test Script
-
-Create a quick test to verify all ingresses work:
+### Verify Complete Request Flow
 
 ```bash
-#!/bin/bash
-ENVOY_PORT=$(docker port $(docker ps -q --filter "ancestor=envoyproxy/envoy:v1.33.2") 80/tcp | cut -d':' -f2)
+# 1. Check envoy proxy is routing to HAProxy LoadBalancer
+docker port $(docker ps -q --filter "ancestor=envoyproxy/envoy:v1.33.2")
 
-echo "Testing Ingress Routes via LoadBalancer..."
-echo ""
+# 2. Verify HAProxy ingress controller pods are running
+kubectl get pods -n networking
 
-echo "✓ Demo App:"
-curl -s -o /dev/null -w "%{http_code}" http://demo.127.0.0.1.nip.io:${ENVOY_PORT}
-echo ""
+# 3. Check backend service endpoints
+kubectl get endpoints -n apps service-a
+kubectl get endpoints -n monitoring monitoring-grafana
 
-echo "✓ Grafana:"
-curl -s -o /dev/null -w "%{http_code}" http://grafana.127.0.0.1.nip.io:${ENVOY_PORT}
-echo ""
+# 4. Test end-to-end connectivity
+curl -I http://demo.127.0.0.1.nip.io:${ENVOY_PORT}
+# Should return: HTTP/1.1 200 OK
 
-echo "✓ Prometheus:"
-curl -s -o /dev/null -w "%{http_code}" http://prometheus.127.0.0.1.nip.io:${ENVOY_PORT}
-echo ""
-
-echo "All ingresses tested! (200 = success, 302 = redirect to login)"
+# 5. Verify ingress logs (optional)
+kubectl logs -n networking -l app.kubernetes.io/name=kubernetes-ingress --tail=50
 ```
 
-Save as `test-ingress.sh`, make executable (`chmod +x test-ingress.sh`), and run!
+### Quick Test Script
+
+The repository includes `scripts/test-ingress.sh` to verify all ingresses:
+
+```bash
+./scripts/test-ingress.sh
+```
+
+This tests all ingress routes and reports HTTP status codes (200 = success, 302 = redirect to login).
 
 ## ➕ Adding New Applications
 

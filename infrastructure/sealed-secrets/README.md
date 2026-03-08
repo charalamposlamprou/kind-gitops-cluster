@@ -32,46 +32,63 @@ tar xfz kubeseal-0.27.2-linux-amd64.tar.gz
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 ```
 
-### 2. Fetch the public certificate
+### 2. Create a SealedSecret
+
+**Method 1: Direct cluster access (recommended)**
+
+The simplest approach - `kubeseal` fetches the certificate automatically from the cluster:
 
 ```bash
-kubeseal --fetch-cert \
-  --controller-name=sealed-secrets-controller \
-  --controller-namespace=sealed-secrets \
-  > pub-sealed-secrets.pem
-```
-
-Save this certificate in your repo (it's public and safe to commit).
-
-### 3. Create a SealedSecret
-
-From a regular Kubernetes Secret YAML file:
-```bash
-# Create a secret (don't commit this!)
+# Create and seal in one command
 kubectl create secret generic my-secret \
   --from-literal=password=my-super-secret \
-  --dry-run=client -o yaml > my-secret.yaml
-
-# Encrypt it into a SealedSecret
-kubeseal --format=yaml --cert=pub-sealed-secrets.pem \
-  < my-secret.yaml > my-sealed-secret.yaml
+  --dry-run=client -o yaml \
+  | kubeseal \
+      --controller-name=sealed-secrets-controller \
+      --controller-namespace=sealed-secrets \
+      --format yaml \
+  > my-sealed-secret.yaml
 
 # Commit the sealed secret safely
 git add my-sealed-secret.yaml
 git commit -m "Add sealed secret"
 ```
 
-Or create directly from literals:
+Example with multiple values:
 ```bash
 kubectl create secret generic my-app-secret \
   --from-literal=db-password=secretvalue \
   --from-literal=api-key=anothersecret \
   --dry-run=client -o yaml \
-  | kubeseal --format yaml --cert pub-sealed-secrets.pem \
+  | kubeseal \
+      --controller-name=sealed-secrets-controller \
+      --controller-namespace=sealed-secrets \
+      --format yaml \
   > applications/my-app/sealed-secret.yaml
 ```
 
-### 4. Apply the SealedSecret
+**Method 2: Using a saved certificate (offline sealing)**
+
+Useful for CI/CD pipelines or when cluster access isn't available:
+
+```bash
+# First, fetch and save the public certificate
+kubeseal --fetch-cert \
+  --controller-name=sealed-secrets-controller \
+  --controller-namespace=sealed-secrets \
+  > pub-sealed-secrets.pem
+
+# Then use it to seal secrets offline
+kubectl create secret generic my-secret \
+  --from-literal=password=my-super-secret \
+  --dry-run=client -o yaml \
+  | kubeseal --format yaml --cert pub-sealed-secrets.pem \
+  > my-sealed-secret.yaml
+```
+
+The certificate is public and safe to commit to Git if needed.
+
+### 3. Apply the SealedSecret
 
 The SealedSecret can be committed to Git. When applied to the cluster:
 ```bash
@@ -113,8 +130,15 @@ kubectl delete secret -n sealed-secrets \
   -l sealedsecrets.bitnami.com/sealed-secrets-key=active
 
 # Controller will generate a new key automatically
-# Fetch the new public cert
-kubeseal --fetch-cert > pub-sealed-secrets-new.pem
+```
+
+After rotation, `kubeseal` will automatically use the new certificate when connected to the cluster. If you saved the certificate for offline use, fetch it again:
+
+```bash
+kubeseal --fetch-cert \
+  --controller-name=sealed-secrets-controller \
+  --controller-namespace=sealed-secrets \
+  > pub-sealed-secrets.pem
 ```
 
 ## Scope Types
@@ -127,6 +151,17 @@ SealedSecrets support different scopes:
 
 Set scope when sealing:
 ```bash
+# Using cluster connection
+kubectl create secret generic my-secret \
+  --from-literal=password=secret \
+  --dry-run=client -o yaml \
+  | kubeseal \
+      --scope namespace-wide \
+      --controller-name=sealed-secrets-controller \
+      --controller-namespace=sealed-secrets \
+      --format yaml
+
+# Or with saved certificate
 kubeseal --scope namespace-wide --cert pub-sealed-secrets.pem < secret.yaml
 ```
 

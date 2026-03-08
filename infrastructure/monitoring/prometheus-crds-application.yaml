@@ -12,7 +12,7 @@ spec:
     namespace: default
   source:
     repoURL: https://github.com/charalamposlamprou/kind-gitops-cluster.git
-    targetRevision: test-1234
+    targetRevision: HEAD
     path: infrastructure/monitoring/prometheus-crds
   syncPolicy:
     automated:

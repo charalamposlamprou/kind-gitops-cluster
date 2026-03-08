@@ -4,7 +4,7 @@ ARGOCD_NAMESPACE ?= argocd
 ROOT_APP_NAME ?= root-app
 ROOT_APP_FILE ?= bootstrap/root-application.yaml
 GITOPS_REPO_URL ?= https://github.com/charalamposlamprou/kind-gitops-cluster.git
-TARGET_REVISION ?= test-1234
+TARGET_REVISION ?= HEAD
 CONTAINER_RUNTIME ?= $(shell if command -v docker >/dev/null 2>&1; then echo docker; elif command -v podman >/dev/null 2>&1; then echo podman; else echo none; fi)
 COMPOSE_FILE ?= infrastructure/cloud-provider/compose.yaml
 

@@ -10,7 +10,7 @@ spec:
     namespace: argocd
   source:
     repoURL: https://github.com/charalamposlamprou/kind-gitops-cluster.git
-    targetRevision: HEAD
+    targetRevision: test-1234
     path: applications
   syncPolicy:
     automated:

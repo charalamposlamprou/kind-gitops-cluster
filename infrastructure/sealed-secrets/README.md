@@ -41,6 +41,7 @@ The simplest approach - `kubeseal` fetches the certificate automatically from th
 ```bash
 # Create and seal in one command
 kubectl create secret generic my-secret \
+  --namespace=default \
   --from-literal=password=my-super-secret \
   --dry-run=client -o yaml \
   | kubeseal \
@@ -57,6 +58,7 @@ git commit -m "Add sealed secret"
 Example with multiple values:
 ```bash
 kubectl create secret generic my-app-secret \
+  --namespace=default \
   --from-literal=db-password=secretvalue \
   --from-literal=api-key=anothersecret \
   --dry-run=client -o yaml \
@@ -65,6 +67,18 @@ kubectl create secret generic my-app-secret \
       --controller-namespace=sealed-secrets \
       --format yaml \
   > applications/my-app/sealed-secret.yaml
+```
+
+**Quick test** (verify it's working):
+```bash
+kubectl create secret generic test-secret \
+  --namespace=default \
+  --from-literal=test=hello \
+  --dry-run=client -o yaml \
+  | kubeseal \
+      --controller-name=sealed-secrets-controller \
+      --controller-namespace=sealed-secrets \
+      --format yaml
 ```
 
 **Method 2: Using a saved certificate (offline sealing)**
@@ -178,6 +192,49 @@ kubectl logs -n sealed-secrets -l app.kubernetes.io/name=sealed-secrets --tail=5
 
 **Wrong certificate**:
 If you sealed with an old certificate after key rotation, re-seal with the current one.
+
+## Troubleshooting
+
+**"error: cannot get sealed secret service" or "cannot fetch certificate"**:
+```bash
+# 1. Verify the controller is running
+kubectl get pods -n sealed-secrets
+
+# 2. Check controller logs
+kubectl logs -n sealed-secrets -l app.kubernetes.io/name=sealed-secrets --tail=50
+
+# 3. Verify the service exists
+kubectl get svc -n sealed-secrets
+
+# 4. Try fetching the cert manually to test connectivity
+kubeseal --fetch-cert \
+  --controller-name=sealed-secrets-controller \
+  --controller-namespace=sealed-secrets
+```
+
+**"kubeseal: command not found"**:
+```bash
+# Install kubeseal
+brew install kubeseal  # macOS
+
+# Or download directly
+wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.27.2/kubeseal-0.27.2-darwin-arm64.tar.gz
+```
+
+**Secret not appearing after applying SealedSecret**:
+```bash
+# Check if SealedSecret exists
+kubectl get sealedsecrets -A
+
+# Check if the corresponding Secret was created
+kubectl get secrets -A | grep <your-secret-name>
+
+# Check controller logs for errors
+kubectl logs -n sealed-secrets -l app.kubernetes.io/name=sealed-secrets --tail=100
+```
+
+**"no kind ... is registered for version bitnami.com/v1alpha1"**:
+The SealedSecret CRD isn't installed. Wait for ArgoCD to sync the sealed-secrets app or install manually.
 
 ## References
 

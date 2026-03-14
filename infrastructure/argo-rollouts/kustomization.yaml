@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
   - argo-rollouts-application.yaml
+  - ingress-argo-rollouts.yaml

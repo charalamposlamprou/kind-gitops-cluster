@@ -18,6 +18,10 @@ spec:
       releaseName: argo-rollouts
       values: |
         installCRDs: true
+        dashboard:
+          enabled: true
+          service:
+            type: ClusterIP
   syncPolicy:
     automated:
       prune: true

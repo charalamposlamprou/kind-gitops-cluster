@@ -1,0 +1,165 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-merged-pr:
+    name: Verify Push Originates From Merged PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+
+    steps:
+      - name: Check Associated Pull Requests
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.sha;
+
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner,
+              repo,
+              commit_sha: sha
+            });
+
+            const mergedPr = prs.find((pr) => pr.merged_at && pr.base.ref === 'main');
+
+            if (mergedPr) {
+              core.info(`Merged PR #${mergedPr.number} found for commit ${sha}.`);
+              core.setOutput('should_release', 'true');
+              core.setOutput('pr_number', String(mergedPr.number));
+            } else {
+              core.info(`No merged PR found for commit ${sha}; release will be skipped.`);
+              core.setOutput('should_release', 'false');
+              core.setOutput('pr_number', '');
+            }
+
+  release:
+    name: Tag and Publish Release
+    runs-on: ubuntu-latest
+    needs:
+      - check-merged-pr
+    if: needs.check-merged-pr.outputs.should_release == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Next Semantic Version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --tags --force
+
+          latest_tag="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
+          if [[ -z "$latest_tag" ]]; then
+            latest_tag="v0.0.0"
+          fi
+
+          if [[ "$latest_tag" == "v0.0.0" ]]; then
+            commit_messages="$(git log --format=%B)"
+          else
+            commit_messages="$(git log --format=%B "${latest_tag}..HEAD")"
+          fi
+
+          bump="patch"
+
+          if grep -Eq 'BREAKING CHANGE|^[a-zA-Z]+(\(.+\))?!:' <<< "$commit_messages"; then
+            bump="major"
+          elif grep -Eq '^feat(\(.+\))?:' <<< "$commit_messages"; then
+            bump="minor"
+          elif grep -Eq '^(fix|perf)(\(.+\))?:' <<< "$commit_messages"; then
+            bump="patch"
+          fi
+
+          current="${latest_tag#v}"
+          IFS='.' read -r major minor patch <<< "$current"
+
+          case "$bump" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          next_version="${major}.${minor}.${patch}"
+          next_tag="v${next_version}"
+
+          echo "version=${next_version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${next_tag}" >> "$GITHUB_OUTPUT"
+          echo "latest_tag=${latest_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and Push Git Tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag='${{ steps.version.outputs.tag }}'
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag ${tag} already exists."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "$tag" -m "Release ${tag}"
+          git push origin "$tag"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = '${{ steps.version.outputs.tag }}';
+
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              core.info(`Release already exists: ${existing.data.html_url}`);
+              return;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
+
+            const release = await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: tag,
+              name: tag,
+              target_commitish: context.sha,
+              generate_release_notes: true,
+              draft: false,
+              prerelease: false
+            });
+
+            core.info(`Created release: ${release.data.html_url}`);

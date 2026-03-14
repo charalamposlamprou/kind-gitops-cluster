@@ -113,6 +113,7 @@ urls:
 	echo "   🚀 Demo App:    http://demo.127.0.0.1.nip.io:$$ENVOY_PORT" && \
 	echo "   📊 Grafana:     http://grafana.127.0.0.1.nip.io:$$ENVOY_PORT  (admin/admin)" && \
 	echo "   📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:$$ENVOY_PORT" && \
+	echo "   🎯 Rollouts:    http://rollouts.127.0.0.1.nip.io:$$ENVOY_PORT" && \
 	echo "   🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:$$ENVOY_PORT   (admin/$$PASSWORD)" && \
 	echo "" && \
 	echo "💡 Tip: Run 'make argocd-password' to get the Argo CD password"

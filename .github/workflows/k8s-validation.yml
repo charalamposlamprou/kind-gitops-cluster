@@ -49,6 +49,16 @@ jobs:
         with:
           version: v1.33.1
 
+      - name: Install kubeconform
+        shell: bash
+        run: |
+          set -euo pipefail
+          # kubeconform validates manifests against Kubernetes JSON schemas
+          # entirely offline — no live cluster or API server needed.
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v
+
       - name: Build and Validate Kustomizations
         shell: bash
         run: |
@@ -67,12 +77,18 @@ jobs:
 
             rendered="$(mktemp)"
 
-            # Build manifests from each kustomization folder.
+            # Build the kustomization to a single rendered manifest stream.
             kubectl kustomize "$dir" > "$rendered"
 
-            # Validate manifests with kubectl client-side dry-run.
-            # --validate=false: no live API server exists in CI; structure is still checked.
-            kubectl apply --dry-run=client --validate=false -f "$rendered" >/dev/null
+            # Validate rendered manifests against Kubernetes JSON schemas offline.
+            # -ignore-missing-schemas: tolerate CRDs (e.g. Argo CD Application)
+            # that have no upstream schema without failing the job.
+            kubeconform \
+              -strict \
+              -ignore-missing-schemas \
+              -kubernetes-version 1.33.1 \
+              -summary \
+              "$rendered"
 
             rm -f "$rendered"
           done
@@ -83,7 +99,12 @@ jobs:
           set -euo pipefail
 
           if [[ -f bootstrap/root-application.yaml ]]; then
-            kubectl apply --dry-run=client --validate=false -f bootstrap/root-application.yaml >/dev/null
+            kubeconform \
+              -strict \
+              -ignore-missing-schemas \
+              -kubernetes-version 1.33.1 \
+              -summary \
+              bootstrap/root-application.yaml
             echo "bootstrap/root-application.yaml validated successfully."
           else
             echo "bootstrap/root-application.yaml not found; skipping."

@@ -1,0 +1,111 @@
+name: Kubernetes Manifest Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - 'applications/**'
+      - 'bootstrap/**'
+      - 'infrastructure/**'
+      - '**/kustomization.yaml'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '.github/workflows/k8s-validation.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'applications/**'
+      - 'bootstrap/**'
+      - 'infrastructure/**'
+      - '**/kustomization.yaml'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '.github/workflows/k8s-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k8s-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-k8s-manifests:
+    name: Validate Kustomize and Kubernetes Manifests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.33.1
+
+      - name: Install kubeconform
+        shell: bash
+        run: |
+          set -euo pipefail
+          # kubeconform validates manifests against Kubernetes JSON schemas
+          # entirely offline — no live cluster or API server needed.
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v
+
+      - name: Build and Validate Kustomizations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t kustomization_files < <(find . -type f -name 'kustomization.yaml' | sort)
+
+          if [[ ${#kustomization_files[@]} -eq 0 ]]; then
+            echo "No kustomization.yaml files found."
+            exit 0
+          fi
+
+          for file in "${kustomization_files[@]}"; do
+            dir="$(dirname "$file")"
+            echo "Validating kustomization in: ${dir}"
+
+            rendered="$(mktemp)"
+
+            # Build the kustomization to a single rendered manifest stream.
+            kubectl kustomize "$dir" > "$rendered"
+
+            # Validate rendered manifests against Kubernetes JSON schemas offline.
+            # -ignore-missing-schemas: tolerate CRDs (e.g. Argo CD Application)
+            # that have no upstream schema without failing the job.
+            kubeconform \
+              -strict \
+              -ignore-missing-schemas \
+              -kubernetes-version 1.33.1 \
+              -summary \
+              "$rendered"
+
+            rm -f "$rendered"
+          done
+
+      - name: Validate Root Bootstrap Application
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f bootstrap/root-application.yaml ]]; then
+            kubeconform \
+              -strict \
+              -ignore-missing-schemas \
+              -kubernetes-version 1.33.1 \
+              -summary \
+              bootstrap/root-application.yaml
+            echo "bootstrap/root-application.yaml validated successfully."
+          else
+            echo "bootstrap/root-application.yaml not found; skipping."
+          fi

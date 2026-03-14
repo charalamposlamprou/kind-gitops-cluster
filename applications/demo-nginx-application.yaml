@@ -10,7 +10,7 @@ spec:
     namespace: apps
   source:
     repoURL: https://github.com/charalamposlamprou/kind-gitops-cluster.git
-    targetRevision: test-1234
+    targetRevision: HEAD
     path: applications/samples/demo-nginx-app
   syncPolicy:
     automated:

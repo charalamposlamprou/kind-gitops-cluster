@@ -31,7 +31,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          runtime="node"
+          # Default to "none"; overridden below when a known runtime is detected.
+          runtime="none"
           node_version="20"
           package_manager="npm"
 

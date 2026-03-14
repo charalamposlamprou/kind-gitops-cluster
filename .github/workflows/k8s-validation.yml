@@ -71,7 +71,8 @@ jobs:
             kubectl kustomize "$dir" > "$rendered"
 
             # Validate manifests with kubectl client-side dry-run.
-            kubectl apply --dry-run=client --validate=true -f "$rendered" >/dev/null
+            # --validate=false: no live API server exists in CI; structure is still checked.
+            kubectl apply --dry-run=client --validate=false -f "$rendered" >/dev/null
 
             rm -f "$rendered"
           done
@@ -82,7 +83,7 @@ jobs:
           set -euo pipefail
 
           if [[ -f bootstrap/root-application.yaml ]]; then
-            kubectl apply --dry-run=client --validate=true -f bootstrap/root-application.yaml >/dev/null
+            kubectl apply --dry-run=client --validate=false -f bootstrap/root-application.yaml >/dev/null
             echo "bootstrap/root-application.yaml validated successfully."
           else
             echo "bootstrap/root-application.yaml not found; skipping."

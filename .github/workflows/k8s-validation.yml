@@ -1,0 +1,89 @@
+name: Kubernetes Manifest Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - 'applications/**'
+      - 'bootstrap/**'
+      - 'infrastructure/**'
+      - '**/kustomization.yaml'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '.github/workflows/k8s-validation.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'applications/**'
+      - 'bootstrap/**'
+      - 'infrastructure/**'
+      - '**/kustomization.yaml'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '.github/workflows/k8s-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k8s-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-k8s-manifests:
+    name: Validate Kustomize and Kubernetes Manifests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.33.1
+
+      - name: Build and Validate Kustomizations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t kustomization_files < <(find . -type f -name 'kustomization.yaml' | sort)
+
+          if [[ ${#kustomization_files[@]} -eq 0 ]]; then
+            echo "No kustomization.yaml files found."
+            exit 0
+          fi
+
+          for file in "${kustomization_files[@]}"; do
+            dir="$(dirname "$file")"
+            echo "Validating kustomization in: ${dir}"
+
+            rendered="$(mktemp)"
+
+            # Build manifests from each kustomization folder.
+            kubectl kustomize "$dir" > "$rendered"
+
+            # Validate manifests with kubectl client-side dry-run.
+            kubectl apply --dry-run=client --validate=true -f "$rendered" >/dev/null
+
+            rm -f "$rendered"
+          done
+
+      - name: Validate Root Bootstrap Application
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f bootstrap/root-application.yaml ]]; then
+            kubectl apply --dry-run=client --validate=true -f bootstrap/root-application.yaml >/dev/null
+            echo "bootstrap/root-application.yaml validated successfully."
+          else
+            echo "bootstrap/root-application.yaml not found; skipping."
+          fi

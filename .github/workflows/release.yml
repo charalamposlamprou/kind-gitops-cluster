@@ -1,0 +1,299 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-merged-pr:
+    name: Verify Push Originates From Merged PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+
+    steps:
+      - name: Check Associated Pull Requests
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.sha;
+
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner,
+              repo,
+              commit_sha: sha
+            });
+
+            const mergedPr = prs.find((pr) => pr.merged_at && pr.base.ref === 'main');
+
+            if (mergedPr) {
+              core.info(`Merged PR #${mergedPr.number} found for commit ${sha}.`);
+              core.setOutput('should_release', 'true');
+              core.setOutput('pr_number', String(mergedPr.number));
+            } else {
+              core.info(`No merged PR found for commit ${sha}; release will be skipped.`);
+              core.setOutput('should_release', 'false');
+              core.setOutput('pr_number', '');
+            }
+
+  release:
+    name: Tag and Publish Release
+    runs-on: ubuntu-latest
+    needs:
+      - check-merged-pr
+    if: needs.check-merged-pr.outputs.should_release == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Runtime
+        id: runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          runtime="node"
+          node_version="20"
+          package_manager="npm"
+
+          if [[ -f package.json ]]; then
+            runtime="node"
+
+            if [[ -f .nvmrc ]]; then
+              node_version="$(< .nvmrc)"
+            elif [[ -f .node-version ]]; then
+              node_version="$(< .node-version)"
+            fi
+
+            if [[ -f pnpm-lock.yaml ]]; then
+              package_manager="pnpm"
+            elif [[ -f yarn.lock ]]; then
+              package_manager="yarn"
+            else
+              package_manager="npm"
+            fi
+          elif [[ -f go.mod ]]; then
+            runtime="go"
+          elif [[ -f pyproject.toml || -f requirements.txt ]]; then
+            runtime="python"
+          fi
+
+          echo "runtime=${runtime}" >> "$GITHUB_OUTPUT"
+          echo "node_version=${node_version}" >> "$GITHUB_OUTPUT"
+          echo "package_manager=${package_manager}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node.js
+        if: steps.runtime.outputs.runtime == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.runtime.outputs.node_version }}
+          cache: ${{ steps.runtime.outputs.package_manager }}
+          cache-dependency-path: |
+            package-lock.json
+            npm-shrinkwrap.json
+            yarn.lock
+            pnpm-lock.yaml
+
+      - name: Setup Python
+        if: steps.runtime.outputs.runtime == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements*.txt
+            pyproject.toml
+
+      - name: Setup Go
+        if: steps.runtime.outputs.runtime == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          runtime='${{ steps.runtime.outputs.runtime }}'
+          pm='${{ steps.runtime.outputs.package_manager }}'
+
+          if [[ "$runtime" == "node" ]]; then
+            case "$pm" in
+              pnpm)
+                corepack enable
+                pnpm install --frozen-lockfile
+                ;;
+              yarn)
+                corepack enable
+                yarn install --frozen-lockfile
+                ;;
+              npm|*)
+                if [[ -f package-lock.json || -f npm-shrinkwrap.json ]]; then
+                  npm ci
+                else
+                  npm install
+                fi
+                ;;
+            esac
+          elif [[ "$runtime" == "python" ]]; then
+            python -m pip install --upgrade pip
+            if [[ -f requirements.txt ]]; then
+              pip install -r requirements.txt
+            elif [[ -f pyproject.toml ]]; then
+              pip install .
+            fi
+          elif [[ "$runtime" == "go" ]]; then
+            go mod download
+          fi
+
+      - name: Run Tests (Release Safety Gate)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          runtime='${{ steps.runtime.outputs.runtime }}'
+          pm='${{ steps.runtime.outputs.package_manager }}'
+
+          if [[ "$runtime" == "node" ]]; then
+            if [[ -f package.json ]] && jq -e '.scripts.test' package.json >/dev/null 2>&1; then
+              case "$pm" in
+                pnpm) pnpm run test ;;
+                yarn) yarn test ;;
+                npm|*) npm test ;;
+              esac
+            elif make -n test >/dev/null 2>&1; then
+              make test
+            else
+              echo "No test command found; skipping tests."
+            fi
+          elif [[ "$runtime" == "python" ]]; then
+            if command -v pytest >/dev/null 2>&1; then
+              pytest -q
+            elif make -n test >/dev/null 2>&1; then
+              make test
+            else
+              echo "No test command found; skipping tests."
+            fi
+          elif [[ "$runtime" == "go" ]]; then
+            go test ./...
+          fi
+
+      - name: Determine Next Semantic Version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --tags --force
+
+          latest_tag="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
+          if [[ -z "$latest_tag" ]]; then
+            latest_tag="v0.0.0"
+          fi
+
+          if [[ "$latest_tag" == "v0.0.0" ]]; then
+            commit_messages="$(git log --format=%B)"
+          else
+            commit_messages="$(git log --format=%B "${latest_tag}..HEAD")"
+          fi
+
+          bump="patch"
+
+          if grep -Eq 'BREAKING CHANGE|^[a-zA-Z]+(\(.+\))?!:' <<< "$commit_messages"; then
+            bump="major"
+          elif grep -Eq '^feat(\(.+\))?:' <<< "$commit_messages"; then
+            bump="minor"
+          elif grep -Eq '^(fix|perf)(\(.+\))?:' <<< "$commit_messages"; then
+            bump="patch"
+          fi
+
+          current="${latest_tag#v}"
+          IFS='.' read -r major minor patch <<< "$current"
+
+          case "$bump" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          next_version="${major}.${minor}.${patch}"
+          next_tag="v${next_version}"
+
+          echo "version=${next_version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${next_tag}" >> "$GITHUB_OUTPUT"
+          echo "latest_tag=${latest_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and Push Git Tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag='${{ steps.version.outputs.tag }}'
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag ${tag} already exists."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "$tag" -m "Release ${tag}"
+          git push origin "$tag"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = '${{ steps.version.outputs.tag }}';
+
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              core.info(`Release already exists: ${existing.data.html_url}`);
+              return;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
+
+            const release = await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: tag,
+              name: tag,
+              target_commitish: context.sha,
+              generate_release_notes: true,
+              draft: false,
+              prerelease: false
+            });
+
+            core.info(`Created release: ${release.data.html_url}`);

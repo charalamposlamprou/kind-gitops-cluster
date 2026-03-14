@@ -1,17 +1,24 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: nginx-sample
   namespace: apps
 spec:
   replicas: 2
+  strategy:
+    blueGreen:
+      activeService: service-a
   selector:
     matchLabels:
       app: nginx-sample
+      app.kubernetes.io/name: demo-nginx
+      app.kubernetes.io/part-of: sample-apps
   template:
     metadata:
       labels:
         app: nginx-sample
+        app.kubernetes.io/name: demo-nginx
+        app.kubernetes.io/part-of: sample-apps
     spec:
       containers:
         - name: nginx

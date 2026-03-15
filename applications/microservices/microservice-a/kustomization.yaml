@@ -6,6 +6,8 @@ namespace: apps
 resources:
   - deployment.yaml
   - service.yaml
+  - preview-service.yaml
+  - configmap.yaml
   - ingress.yaml
 
 labels:

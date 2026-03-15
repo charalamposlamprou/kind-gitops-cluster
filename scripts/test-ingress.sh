@@ -16,9 +16,18 @@ fi
 echo "📡 Using LoadBalancer port: $ENVOY_PORT"
 echo ""
 
-# Test demo app
-echo -n "Testing Demo App (demo.127.0.0.1.nip.io)... "
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://demo.127.0.0.1.nip.io:${ENVOY_PORT})
+# Test microservice-a
+echo -n "Testing Microservice A (microservice-a.127.0.0.1.nip.io)... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://microservice-a.127.0.0.1.nip.io:${ENVOY_PORT})
+if [ "$HTTP_CODE" = "200" ]; then
+    echo "✅ $HTTP_CODE OK"
+else
+    echo "⚠️  $HTTP_CODE (expected 200)"
+fi
+
+# Test microservice-b
+echo -n "Testing Microservice B (microservice-b.127.0.0.1.nip.io)... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://microservice-b.127.0.0.1.nip.io:${ENVOY_PORT})
 if [ "$HTTP_CODE" = "200" ]; then
     echo "✅ $HTTP_CODE OK"
 else

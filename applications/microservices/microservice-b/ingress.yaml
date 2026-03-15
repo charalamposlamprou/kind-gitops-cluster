@@ -1,18 +1,18 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: demo-nginx-ingress
+  name: microservice-b-ingress
   namespace: apps
 spec:
   ingressClassName: haproxy
   rules:
-    - host: demo.127.0.0.1.nip.io
+    - host: microservice-b.127.0.0.1.nip.io
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: service-a
+                name: service-b
                 port:
                   number: 80

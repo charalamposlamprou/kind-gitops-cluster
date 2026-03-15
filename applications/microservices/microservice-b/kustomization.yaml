@@ -11,5 +11,5 @@ resources:
 labels:
   - includeSelectors: true
     pairs:
-      app.kubernetes.io/name: demo-nginx
-      app.kubernetes.io/part-of: sample-apps
+      app.kubernetes.io/name: microservice-b
+      app.kubernetes.io/part-of: microservices

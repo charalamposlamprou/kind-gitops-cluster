@@ -110,7 +110,8 @@ urls:
 	fi && \
 	echo "📱 Application URLs (via LoadBalancer):" && \
 	echo "" && \
-	echo "   🚀 Demo App:    http://demo.127.0.0.1.nip.io:$$ENVOY_PORT" && \
+	echo "   🚀 Microservice A: http://microservice-a.127.0.0.1.nip.io:$$ENVOY_PORT" && \
+	echo "   🚀 Microservice B: http://microservice-b.127.0.0.1.nip.io:$$ENVOY_PORT" && \
 	echo "   📊 Grafana:     http://grafana.127.0.0.1.nip.io:$$ENVOY_PORT  (admin/admin)" && \
 	echo "   📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:$$ENVOY_PORT" && \
 	echo "   🎯 Rollouts:    http://rollouts.127.0.0.1.nip.io:$$ENVOY_PORT" && \

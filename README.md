@@ -71,7 +71,8 @@ make urls
 ```
 📱 Application URLs (via LoadBalancer):
 
-   🚀 Demo App:    http://demo.127.0.0.1.nip.io:63404
+       🚀 Microservice A: http://microservice-a.127.0.0.1.nip.io:63404
+       🚀 Microservice B: http://microservice-b.127.0.0.1.nip.io:63404
    📊 Grafana:     http://grafana.127.0.0.1.nip.io:63404  (admin/admin)
    📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:63404
    🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:63404
@@ -96,7 +97,8 @@ root-app (bootstrap/root-application.yaml)
   │   └─ monitoring-stack (Prometheus + Grafana)
   │
   └─ apps-app → applications/
-      └─ demo-nginx-app (sample application)
+         ├─ microservice-a
+         └─ microservice-b
 ```
 
 **Benefits:**
@@ -114,7 +116,7 @@ root-app (bootstrap/root-application.yaml)
 | **HAProxy Ingress** | HTTP/HTTPS routing | v3.1.9 (chart 1.46.0) |
 | **cloud-provider-kind** | LoadBalancer emulation | v0.7.0 |
 | **kube-prometheus-stack** | Monitoring (Prometheus + Grafana) | v70.0.0 |
-| **Demo Nginx App** | Sample application | latest |
+| **Microservice A/B** | Sample applications | latest |
 
 ## 📂 Repository Structure
 
@@ -142,8 +144,12 @@ root-app (bootstrap/root-application.yaml)
 │       └── compose.yaml         # cloud-provider-kind (host component)
 │
 ├── applications/                 # Your applications go here
-│   └── samples/
-│       └── demo-nginx-app/      # Example nginx deployment
+│   ├── apps/                    # Argo CD Application resources
+│   │   ├── microservice-a-application.yaml
+│   │   └── microservice-b-application.yaml
+│   └── microservices/
+│       ├── microservice-a/      # Example nginx deployment A
+│       └── microservice-b/      # Example nginx deployment B
 │
 ├── docs/
 │   └── ACCESSING-APPS.md        # Comprehensive guide: 5 ways to access apps
@@ -211,7 +217,8 @@ This shows URLs for all services using **nip.io DNS** (no `/etc/hosts` editing r
 ```
 📱 Application URLs (via LoadBalancer):
 
-   🚀 Demo App:    http://demo.127.0.0.1.nip.io:63404
+       🚀 Microservice A: http://microservice-a.127.0.0.1.nip.io:63404
+       🚀 Microservice B: http://microservice-b.127.0.0.1.nip.io:63404
    📊 Grafana:     http://grafana.127.0.0.1.nip.io:63404  (admin/admin)
    📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:63404
    🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:63404
@@ -260,9 +267,13 @@ kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 909
 kubectl port-forward -n argocd svc/argocd-server 8080:443
 # Access: https://localhost:8080 (admin/<password from make argocd-password>)
 
-# Demo app
+# Microservice A
 kubectl port-forward -n apps svc/service-a 8081:80
 # Access: http://localhost:8081
+
+# Microservice B
+kubectl port-forward -n apps svc/service-b 8082:80
+# Access: http://localhost:8082
 ```
 
 **💡 Tip:** For production-like environments with ports 80/443, see the NodePort configuration in [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md#option-3-nodeport--fixed-kind-port-mappings-).

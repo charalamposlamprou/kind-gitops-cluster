@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: microservice-a
+  namespace: apps
+spec:
+  replicas: 2
+  strategy:
+    blueGreen:
+      activeService: service-a
+  selector:
+    matchLabels:
+      app: microservice-a
+      app.kubernetes.io/name: microservice-a
+      app.kubernetes.io/part-of: microservices
+  template:
+    metadata:
+      labels:
+        app: microservice-a
+        app.kubernetes.io/name: microservice-a
+        app.kubernetes.io/part-of: microservices
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

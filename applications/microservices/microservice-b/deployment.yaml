@@ -1,24 +1,24 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
-  name: nginx-sample
+  name: microservice-b
   namespace: apps
 spec:
   replicas: 2
   strategy:
     blueGreen:
-      activeService: service-a
+      activeService: service-b
   selector:
     matchLabels:
-      app: nginx-sample
-      app.kubernetes.io/name: demo-nginx
-      app.kubernetes.io/part-of: sample-apps
+      app: microservice-b
+      app.kubernetes.io/name: microservice-b
+      app.kubernetes.io/part-of: microservices
   template:
     metadata:
       labels:
-        app: nginx-sample
-        app.kubernetes.io/name: demo-nginx
-        app.kubernetes.io/part-of: sample-apps
+        app: microservice-b
+        app.kubernetes.io/name: microservice-b
+        app.kubernetes.io/part-of: microservices
     spec:
       containers:
         - name: nginx

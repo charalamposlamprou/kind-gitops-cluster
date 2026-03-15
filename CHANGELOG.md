@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-03-15
+
+### ⚠️ Breaking Changes
+
+- Refactored application repository structure under applications:
+  - Added applications/apps for Argo CD Application manifests
+  - Renamed applications/samples to applications/microservices
+  - Renamed demo-nginx application to microservice-a
+  - Added a second sample app, microservice-b
+- Updated Argo CD and Kustomize paths to the new directory layout.
+- Replaced legacy demo host and ingress naming with microservice-specific hosts:
+  - microservice-a.127.0.0.1.nip.io
+  - microservice-b.127.0.0.1.nip.io
+
+### ✨ New Features
+
+- Added microservice-b with its own Rollout, Service, Ingress, and Argo CD Application.
+- Updated helper commands and ingress test script to include both microservices.
+
+### 🧭 Migration Notes
+
+- If you referenced old paths like applications/samples/demo-nginx-app, update automation to:
+  - applications/microservices/microservice-a
+  - applications/microservices/microservice-b
+- If you used demo.127.0.0.1.nip.io, switch to the new microservice hostnames.
+
+---
+
 ## [1.1.0] - 2026-03-08
 
 ### 🎉 Version 1.1.0 - Sealed Secrets Support

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microservice-a-html
+  namespace: apps
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>Microservice A</title>
+    </head>
+    <body>
+      <h1>Microservice-a</h1>
+      <p>Blue/Green test page</p>
+    </body>
+    </html>

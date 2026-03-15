@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2026-03-15
+
+### 🩹 Patch Updates
+
+- Added Argo Rollouts blue/green preview services for both applications:
+  - service-a-preview
+  - service-b-preview
+- Added per-microservice ConfigMaps with custom index.html content:
+  - Microservice-a page
+  - Microservice-b page
+- Mounted ConfigMap-based index pages into nginx containers.
+- Updated each microservice kustomization to include preview service and ConfigMap resources.
+
+---
+
 ## [2.0.0] - 2026-03-15
 
 ### ⚠️ Breaking Changes

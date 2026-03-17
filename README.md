@@ -150,7 +150,7 @@ root-app (bootstrap/root-application.yaml)
 │   │   ├── kube-prometheus-stack-application.yaml
 │   │   ├── loki-application.yaml
 │   │   ├── tempo-application.yaml
-│   │   ├── otel-collector-app.yaml
+│   │   ├── otel-collector-application.yaml
 │   │   └── ingress-monitoring.yaml   # Grafana/Prometheus ingress
 │   └── cloud-provider/
 │       └── compose.yaml         # cloud-provider-kind (host component)

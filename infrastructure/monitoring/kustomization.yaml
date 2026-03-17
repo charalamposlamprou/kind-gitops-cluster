@@ -7,5 +7,5 @@ resources:
   - kube-prometheus-stack-application.yaml
   - loki-application.yaml
   - tempo-application.yaml
-  - otel-collector-app.yaml
+  - otel-collector-application.yaml
   - ingress-monitoring.yaml

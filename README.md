@@ -295,8 +295,13 @@ kubectl port-forward -n apps svc/service-b 8082:80
 After syncing apps, run a quick end-to-end validation.
 
 ```bash
-# Verify ServiceMonitor exists for the OpenTelemetry Collector
-kubectl get servicemonitor -n monitoring | grep otel-collector
+# Automated smoke test (Prometheus scrape + Tempo trace + collector-to-Loki export counter)
+make test-otel
+```
+
+```bash
+# Verify PodMonitor exists for the OpenTelemetry Collector (daemonset mode)
+kubectl get podmonitor -n monitoring | grep otel-collector
 
 # Port-forward Prometheus
 kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090
@@ -305,7 +310,7 @@ kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 909
 Open Prometheus and run this query:
 
 ```promql
-sum by (job, instance) (up{namespace="monitoring", service="otel-collector"})
+sum by (job, instance) (up{namespace="monitoring", job=~".*otel-collector.*"})
 ```
 
 Expected result: one `up=1` series per collector target.

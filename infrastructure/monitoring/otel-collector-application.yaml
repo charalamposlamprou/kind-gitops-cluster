@@ -34,6 +34,12 @@ spec:
                   endpoint: 0.0.0.0:4317
                 http:
                   endpoint: 0.0.0.0:4318
+            filelog:
+              include:
+                - /var/log/pods/*/*/*.log
+              exclude:
+                - /var/log/pods/monitoring_otel-collector*_*/otel-collector/*.log
+              start_at: end
           processors:
             memory_limiter:
               check_interval: 5s

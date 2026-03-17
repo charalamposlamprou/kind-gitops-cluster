@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1] - 2026-03-17
+
+### 🩹 Patch Updates
+
+- Fixed OpenTelemetry Collector Helm values to match chart schema:
+  - Moved service port exposure to `ports.metrics`.
+  - Updated ServiceMonitor endpoint from `prometheus` to `metrics`.
+- Prevents invalid values rendering and ensures metrics scraping remains configured.
+
 ## [2.0.1] - 2026-03-15
 
 ### 🩹 Patch Updates

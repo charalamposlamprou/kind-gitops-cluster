@@ -66,10 +66,6 @@ spec:
         service:
           enabled: true
           type: ClusterIP
-          annotations:
-            prometheus.io/scrape: "true"
-            prometheus.io/port: "8889"
-            prometheus.io/path: /metrics
           ports:
             - name: otlp-grpc
               port: 4317
@@ -83,6 +79,13 @@ spec:
               port: 8889
               targetPort: 8889
               protocol: TCP
+        serviceMonitor:
+          enabled: true
+          extraLabels:
+            release: monitoring
+          metricsEndpoints:
+            - port: prometheus
+              path: /metrics
   syncPolicy:
     automated:
       prune: true

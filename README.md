@@ -290,6 +290,39 @@ kubectl port-forward -n apps svc/service-b 8082:80
 
 **💡 Tip:** For production-like environments with ports 80/443, see the NodePort configuration in [docs/ACCESSING-APPS.md](docs/ACCESSING-APPS.md#option-3-nodeport--fixed-kind-port-mappings-).
 
+### Observability Smoke Checks
+
+After syncing apps, run a quick end-to-end validation.
+
+```bash
+# Verify ServiceMonitor exists for the OpenTelemetry Collector
+kubectl get servicemonitor -n monitoring | grep otel-collector
+
+# Port-forward Prometheus
+kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090
+```
+
+Open Prometheus and run this query:
+
+```promql
+sum by (job, instance) (up{namespace="monitoring", service="otel-collector"})
+```
+
+Expected result: one `up=1` series per collector target.
+
+Optional traffic-based checks (after sending telemetry to the collector):
+
+```promql
+sum(rate(otelcol_exporter_sent_spans[5m]))
+sum(rate(otelcol_exporter_sent_log_records[5m]))
+```
+
+Grafana quick checks:
+
+1. Open Grafana (`make urls`) and verify data sources `Prometheus`, `Loki`, and `Tempo` are healthy in **Connections -> Data sources**.
+2. In **Explore**, select `Tempo` and run a trace search.
+3. In **Explore**, select `Loki` and run `{namespace="monitoring"}` to confirm log ingestion.
+
 ## 🧪 Testing LoadBalancer & Ingress
 
 This setup uses **cloud-provider-kind** to emulate cloud LoadBalancers (AWS ELB, GCP LB, Azure LB), providing a **production-like environment** locally.

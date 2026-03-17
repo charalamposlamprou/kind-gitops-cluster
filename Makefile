@@ -10,7 +10,7 @@ COMPOSE_FILE ?= infrastructure/cloud-provider/compose.yaml
 
 .DEFAULT_GOAL := help
 
-.PHONY: help cluster-up cluster-down bootstrap apps-install cloud-provider-up cloud-provider-down cloud-provider-wait argocd-password argocd-status urls test-ingress
+.PHONY: help cluster-up cluster-down bootstrap apps-install cloud-provider-up cloud-provider-down cloud-provider-wait argocd-password argocd-status urls test-ingress test-otel
 
 help:
 	@echo "GitOps lifecycle commands"
@@ -20,6 +20,7 @@ help:
 	@echo "  make apps-install    - Refresh root App-of-Apps and show app status"
 	@echo "  make urls            - Show all application URLs"
 	@echo "  make test-ingress    - Test all ingress routes via LoadBalancer"
+	@echo "  make test-otel       - Run OpenTelemetry smoke checks (Prometheus/Tempo/Loki)"
 	@echo "  make argocd-password - Get Argo CD admin password"
 	@echo "  make argocd-status   - Show Argo CD application status"
 
@@ -121,3 +122,6 @@ urls:
 
 test-ingress:
 	@./scripts/test-ingress.sh
+
+test-otel:
+	@./scripts/test-otel.sh

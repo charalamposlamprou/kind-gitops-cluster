@@ -24,8 +24,23 @@ spec:
         presets:
           kubernetesAttributes:
             enabled: true
-          logsCollection:
-            enabled: true
+        extraVolumes:
+          - name: varlogpods
+            hostPath:
+              path: /var/log/pods
+          - name: varlibdockercontainers
+            hostPath:
+              path: /var/lib/docker/containers
+        extraVolumeMounts:
+          - name: varlogpods
+            mountPath: /var/log/pods
+            readOnly: true
+          - name: varlibdockercontainers
+            mountPath: /var/lib/docker/containers
+            readOnly: true
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
         config:
           receivers:
             otlp:
@@ -39,6 +54,7 @@ spec:
                 - /var/log/pods/*/*/*.log
               exclude:
                 - /var/log/pods/monitoring_otel-collector*_*/otel-collector/*.log
+              include_file_path: true
               start_at: end
           processors:
             memory_limiter:
@@ -78,7 +94,7 @@ spec:
             containerPort: 8889
             servicePort: 8889
             protocol: TCP
-        serviceMonitor:
+        podMonitor:
           enabled: true
           extraLabels:
             release: monitoring

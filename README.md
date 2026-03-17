@@ -55,9 +55,12 @@ kubectl get applications -n argocd
 # apps-app           Synced   Healthy
 # infra-app          Synced   Healthy
 # ingress-haproxy    Synced   Healthy
+# loki               Synced   Healthy
 # monitoring-stack   Synced   Healthy
+# otel-collector     Synced   Healthy
 # prometheus-crds    Synced   Healthy
 # root-app           Synced   Healthy
+# tempo              Synced   Healthy
 ```
 
 ### 🌐 Quick Access to Applications
@@ -73,7 +76,7 @@ make urls
 
        🚀 Microservice A: http://microservice-a.127.0.0.1.nip.io:63404
        🚀 Microservice B: http://microservice-b.127.0.0.1.nip.io:63404
-   📊 Grafana:     http://grafana.127.0.0.1.nip.io:63404  (admin/admin)
+       📊 Grafana:     http://grafana.127.0.0.1.nip.io:63404  (admin/admin, Loki+Tempo ready)
    📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:63404
    🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:63404
 ```
@@ -90,15 +93,18 @@ This repository uses Argo CD's **App-of-Apps pattern** - a hierarchical structur
 
 ```
 root-app (bootstrap/root-application.yaml)
-  │
-  ├─ infra-app → infrastructure/
-  │   ├─ prometheus-crds (CRDs for monitoring)
-  │   ├─ ingress-haproxy (HAProxy ingress controller)
-  │   └─ monitoring-stack (Prometheus + Grafana)
-  │
-  └─ apps-app → applications/
-         ├─ microservice-a
-         └─ microservice-b
+|
+|-- infra-app -> infrastructure/
+|   |-- prometheus-crds (CRDs for monitoring)
+|   |-- ingress-haproxy (HAProxy ingress controller)
+|   |-- monitoring-stack (Prometheus + Grafana)
+|   |-- loki (logs backend)
+|   |-- tempo (traces backend)
+|   `-- otel-collector (DaemonSet telemetry pipeline)
+|
+`-- apps-app -> applications/
+       |-- microservice-a
+       `-- microservice-b
 ```
 
 **Benefits:**
@@ -116,6 +122,9 @@ root-app (bootstrap/root-application.yaml)
 | **HAProxy Ingress** | HTTP/HTTPS routing | v3.1.9 (chart 1.46.0) |
 | **cloud-provider-kind** | LoadBalancer emulation | v0.7.0 |
 | **kube-prometheus-stack** | Monitoring (Prometheus + Grafana) | v70.0.0 |
+| **Loki** | Logs storage/query backend | chart 2.10.2 |
+| **Tempo** | Distributed tracing backend | chart 1.10.1 |
+| **OpenTelemetry Collector** | DaemonSet telemetry pipeline | chart 0.89.0 |
 | **Microservice A/B** | Sample applications | latest |
 
 ## 📂 Repository Structure
@@ -139,6 +148,9 @@ root-app (bootstrap/root-application.yaml)
 │   │   ├── prometheus-crds/     # Prometheus Operator CRDs
 │   │   ├── prometheus-crds-application.yaml
 │   │   ├── kube-prometheus-stack-application.yaml
+│   │   ├── loki-application.yaml
+│   │   ├── tempo-application.yaml
+│   │   ├── otel-collector-app.yaml
 │   │   └── ingress-monitoring.yaml   # Grafana/Prometheus ingress
 │   └── cloud-provider/
 │       └── compose.yaml         # cloud-provider-kind (host component)

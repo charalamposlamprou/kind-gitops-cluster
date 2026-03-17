@@ -112,7 +112,7 @@ urls:
 	echo "" && \
 	echo "   🚀 Microservice A: http://microservice-a.127.0.0.1.nip.io:$$ENVOY_PORT" && \
 	echo "   🚀 Microservice B: http://microservice-b.127.0.0.1.nip.io:$$ENVOY_PORT" && \
-	echo "   📊 Grafana:     http://grafana.127.0.0.1.nip.io:$$ENVOY_PORT  (admin/admin)" && \
+	echo "   📊 Grafana:     http://grafana.127.0.0.1.nip.io:$$ENVOY_PORT  (admin/admin, Loki+Tempo ready)" && \
 	echo "   📈 Prometheus:  http://prometheus.127.0.0.1.nip.io:$$ENVOY_PORT" && \
 	echo "   🎯 Rollouts:    http://rollouts.127.0.0.1.nip.io:$$ENVOY_PORT" && \
 	echo "   🔄 Argo CD:     http://argocd.127.0.0.1.nip.io:$$ENVOY_PORT   (admin/$$PASSWORD)" && \

@@ -1,0 +1,91 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: otel-collector
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    targetRevision: 0.89.0
+    helm:
+      releaseName: otel-collector
+      values: |
+        mode: daemonset
+        fullnameOverride: otel-collector
+        image:
+          repository: otel/opentelemetry-collector-contrib
+        presets:
+          kubernetesAttributes:
+            enabled: true
+          logsCollection:
+            enabled: true
+        config:
+          receivers:
+            otlp:
+              protocols:
+                grpc:
+                  endpoint: 0.0.0.0:4317
+                http:
+                  endpoint: 0.0.0.0:4318
+          processors:
+            memory_limiter:
+              check_interval: 5s
+              limit_mib: 256
+              spike_limit_mib: 64
+            batch: {}
+          exporters:
+            otlp/tempo:
+              endpoint: tempo.monitoring.svc.cluster.local:4317
+              tls:
+                insecure: true
+            loki:
+              endpoint: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+            prometheus:
+              endpoint: 0.0.0.0:8889
+          service:
+            pipelines:
+              traces:
+                receivers: [otlp]
+                processors: [memory_limiter, batch]
+                exporters: [otlp/tempo]
+              logs:
+                receivers: [otlp, filelog]
+                processors: [memory_limiter, batch]
+                exporters: [loki]
+              metrics:
+                receivers: [otlp]
+                processors: [memory_limiter, batch]
+                exporters: [prometheus]
+        service:
+          enabled: true
+          type: ClusterIP
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "8889"
+            prometheus.io/path: /metrics
+          ports:
+            - name: otlp-grpc
+              port: 4317
+              targetPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              port: 4318
+              targetPort: 4318
+              protocol: TCP
+            - name: prometheus
+              port: 8889
+              targetPort: 8889
+              protocol: TCP
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

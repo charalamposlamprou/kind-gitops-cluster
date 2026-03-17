@@ -5,4 +5,7 @@ resources:
   - monitoring-namespace.yaml
   - prometheus-crds-application.yaml
   - kube-prometheus-stack-application.yaml
+  - loki-application.yaml
+  - tempo-application.yaml
+  - otel-collector-app.yaml
   - ingress-monitoring.yaml

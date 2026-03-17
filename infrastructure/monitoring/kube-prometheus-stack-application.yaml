@@ -20,11 +20,50 @@ spec:
       values: |
         grafana:
           adminPassword: admin
+          additionalDataSources:
+            - name: Loki
+              uid: loki
+              type: loki
+              access: proxy
+              url: http://loki.monitoring.svc.cluster.local:3100
+              isDefault: false
+              jsonData:
+                maxLines: 1000
+            - name: Tempo
+              uid: tempo
+              type: tempo
+              access: proxy
+              url: http://tempo.monitoring.svc.cluster.local:3100
+              isDefault: false
+              jsonData:
+                httpMethod: GET
+                serviceMap:
+                  datasourceUid: prometheus
+                tracesToLogsV2:
+                  datasourceUid: loki
+                  spanStartTimeShift: -10m
+                  spanEndTimeShift: 10m
+                  tags:
+                    - key: service.name
+                      value: service
+                tracesToMetrics:
+                  datasourceUid: prometheus
+                  tags:
+                    - key: service.name
+                      value: service
+                  queries:
+                    - name: Request rate
+                      query: sum(rate(http_server_duration_milliseconds_count{$$__tags}[5m]))
+                nodeGraph:
+                  enabled: true
           service:
             type: ClusterIP
           ingress:
             enabled: false
         prometheus:
+          prometheusSpec:
+            enableFeatures:
+              - exemplar-storage
           service:
             type: ClusterIP
           ingress:

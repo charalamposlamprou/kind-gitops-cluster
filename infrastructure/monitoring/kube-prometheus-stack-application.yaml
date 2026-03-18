@@ -73,9 +73,8 @@ spec:
             monitor:
               # Avoid ArgoCD app-instance label rewrite mismatch (monitoring vs monitoring-stack).
               selectorOverride:
-                matchLabels:
-                  release: monitoring
-                  app.kubernetes.io/name: kube-state-metrics
+                release: monitoring
+                app.kubernetes.io/name: kube-state-metrics
         prometheus:
           prometheusSpec:
             enableFeatures:

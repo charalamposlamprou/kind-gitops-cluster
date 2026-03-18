@@ -66,6 +66,8 @@ spec:
           enabled: false
         kubeProxy:
           enabled: false
+        kubeScheduler:
+          enabled: false
         prometheus:
           prometheusSpec:
             enableFeatures:

@@ -77,6 +77,8 @@ spec:
                 app.kubernetes.io/name: kube-state-metrics
         prometheus:
           prometheusSpec:
+            podMonitorSelector: {}
+            podMonitorNamespaceSelector: {}
             enableFeatures:
               - exemplar-storage
           service:

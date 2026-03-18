@@ -64,6 +64,8 @@ spec:
           enabled: false
         kubeEtcd:
           enabled: false
+        kubeProxy:
+          enabled: false
         prometheus:
           prometheusSpec:
             enableFeatures:

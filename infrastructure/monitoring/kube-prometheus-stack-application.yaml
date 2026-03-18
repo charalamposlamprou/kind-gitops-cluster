@@ -68,6 +68,14 @@ spec:
           enabled: false
         kubeScheduler:
           enabled: false
+        kube-state-metrics:
+          prometheus:
+            monitor:
+              # Avoid ArgoCD app-instance label rewrite mismatch (monitoring vs monitoring-stack).
+              selectorOverride:
+                matchLabels:
+                  release: monitoring
+                  app.kubernetes.io/name: kube-state-metrics
         prometheus:
           prometheusSpec:
             enableFeatures:

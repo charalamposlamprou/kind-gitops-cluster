@@ -18,12 +18,16 @@ spec:
       releaseName: loki
       values: |
         loki:
+          isDefault: false
           persistence:
             enabled: false
         promtail:
           enabled: false
         grafana:
           enabled: false
+          sidecar:
+            datasources:
+              enabled: false
         prometheus:
           enabled: false
   syncPolicy:

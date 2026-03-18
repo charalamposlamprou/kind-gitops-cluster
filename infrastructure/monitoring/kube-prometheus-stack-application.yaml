@@ -60,6 +60,10 @@ spec:
             type: ClusterIP
           ingress:
             enabled: false
+        kubeControllerManager:
+          enabled: false
+        kubeEtcd:
+          enabled: false
         prometheus:
           prometheusSpec:
             enableFeatures:

@@ -1,19 +1,71 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: microservice-b-html
+  name: microservice-b-app
   namespace: apps
 data:
-  index.html: |
-    <!doctype html>
-    <html lang="en">
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <title>Microservice B</title>
-    </head>
-    <body>
-      <h1>Microservice-b</h1>
-      <p>Blue/Green test page</p>
-    </body>
-    </html>
+  package.json: |
+    {
+      "name": "microservice-b",
+      "version": "1.0.0",
+      "private": true,
+      "dependencies": {
+        "@opentelemetry/api": "^1.9.0",
+        "@opentelemetry/auto-instrumentations-node": "^0.57.0",
+        "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+        "@opentelemetry/resources": "^1.30.1",
+        "@opentelemetry/sdk-node": "^0.57.0",
+        "@opentelemetry/semantic-conventions": "^1.30.0"
+      }
+    }
+  otel.js: |
+    const { NodeSDK } = require("@opentelemetry/sdk-node");
+    const { getNodeAutoInstrumentations } = require("@opentelemetry/auto-instrumentations-node");
+    const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-http");
+    const { resourceFromAttributes } = require("@opentelemetry/resources");
+    const { SEMRESATTRS_SERVICE_NAME } = require("@opentelemetry/semantic-conventions");
+
+    const baseEndpoint =
+      process.env.OTEL_EXPORTER_OTLP_ENDPOINT ||
+      "http://otel-collector.monitoring.svc.cluster.local:4318";
+    const traceEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || `${baseEndpoint}/v1/traces`;
+
+    const sdk = new NodeSDK({
+      resource: resourceFromAttributes({
+        [SEMRESATTRS_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || "microservice-b",
+      }),
+      traceExporter: new OTLPTraceExporter({ url: traceEndpoint }),
+      instrumentations: [getNodeAutoInstrumentations()],
+    });
+
+    sdk.start();
+
+    process.on("SIGTERM", () => {
+      sdk.shutdown().finally(() => process.exit(0));
+    });
+  app.js: |
+    const http = require("http");
+
+    const port = Number(process.env.PORT || 80);
+
+    const server = http.createServer((req, res) => {
+      if (req.url === "/healthz") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok", service: "microservice-b" }));
+        return;
+      }
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          service: "microservice-b",
+          path: req.url,
+          message: "hello from node",
+          timestamp: new Date().toISOString(),
+        })
+      );
+    });
+
+    server.listen(port, () => {
+      console.log(`microservice-b listening on ${port}`);
+    });

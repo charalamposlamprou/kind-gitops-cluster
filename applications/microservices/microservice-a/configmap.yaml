@@ -1,19 +1,106 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: microservice-a-html
+  name: microservice-a-app
   namespace: apps
 data:
-  index.html: |
-    <!doctype html>
-    <html lang="en">
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <title>Microservice A</title>
-    </head>
-    <body>
-      <h1>Microservice-a</h1>
-      <p>Blue/Green test page</p>
-    </body>
-    </html>
+  package.json: |
+    {
+      "name": "microservice-a",
+      "version": "1.0.0",
+      "private": true,
+      "dependencies": {
+        "@opentelemetry/api": "^1.9.0",
+        "@opentelemetry/auto-instrumentations-node": "^0.57.0",
+        "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+        "@opentelemetry/resources": "^1.30.1",
+        "@opentelemetry/sdk-node": "^0.57.0",
+        "@opentelemetry/semantic-conventions": "^1.30.0"
+      }
+    }
+  otel.js: |
+    const { NodeSDK } = require("@opentelemetry/sdk-node");
+    const { getNodeAutoInstrumentations } = require("@opentelemetry/auto-instrumentations-node");
+    const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-http");
+    const { resourceFromAttributes } = require("@opentelemetry/resources");
+    const { SEMRESATTRS_SERVICE_NAME } = require("@opentelemetry/semantic-conventions");
+
+    const baseEndpoint =
+      process.env.OTEL_EXPORTER_OTLP_ENDPOINT ||
+      "http://otel-collector.monitoring.svc.cluster.local:4318";
+    const traceEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || `${baseEndpoint}/v1/traces`;
+
+    const sdk = new NodeSDK({
+      resource: resourceFromAttributes({
+        [SEMRESATTRS_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || "microservice-a",
+      }),
+      traceExporter: new OTLPTraceExporter({ url: traceEndpoint }),
+      instrumentations: [getNodeAutoInstrumentations()],
+    });
+
+    sdk.start();
+
+    process.on("SIGTERM", () => {
+      sdk.shutdown().finally(() => process.exit(0));
+    });
+  app.js: |
+    const http = require("http");
+
+    const port = Number(process.env.PORT || 80);
+    const serviceBUrl = process.env.SERVICE_B_URL || "http://service-b.apps.svc.cluster.local/";
+
+    const server = http.createServer(async (req, res) => {
+      if (req.url === "/healthz") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok", service: "microservice-a" }));
+        return;
+      }
+
+      if (req.url && req.url.startsWith("/call-b")) {
+        try {
+          const downstream = await fetch(serviceBUrl, {
+            method: "GET",
+            headers: {
+              "x-origin-service": "microservice-a",
+            },
+          });
+
+          const downstreamBody = await downstream.text();
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              service: "microservice-a",
+              path: req.url,
+              called: serviceBUrl,
+              downstreamStatus: downstream.status,
+              downstreamBody,
+              timestamp: new Date().toISOString(),
+            })
+          );
+        } catch (err) {
+          res.writeHead(502, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              service: "microservice-a",
+              error: "downstream call failed",
+              details: err.message,
+            })
+          );
+        }
+        return;
+      }
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          service: "microservice-a",
+          message: "hello from node",
+          callBEndpoint: "/call-b",
+          timestamp: new Date().toISOString(),
+        })
+      );
+    });
+
+    server.listen(port, () => {
+      console.log(`microservice-a listening on ${port}`);
+    });

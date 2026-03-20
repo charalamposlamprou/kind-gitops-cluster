@@ -8,10 +8,62 @@ require_cmd() {
   fi
 }
 
+detect_container_runtime() {
+  if command -v docker >/dev/null 2>&1; then
+    echo "docker"
+    return 0
+  fi
+
+  if command -v podman >/dev/null 2>&1; then
+    echo "podman"
+    return 0
+  fi
+
+  return 1
+}
+
+detect_envoy_http_port() {
+  local runtime container_id port
+
+  runtime="$(detect_container_runtime)" || return 1
+  container_id="$($runtime ps -q --filter "ancestor=envoyproxy/envoy:v1.33.2" | head -n 1)"
+
+  if [ -z "$container_id" ]; then
+    return 1
+  fi
+
+  port="$($runtime port "$container_id" 80/tcp 2>/dev/null | awk -F: '/0.0.0.0:|\[::\]:/ {print $NF; exit}')"
+
+  if [ -z "$port" ]; then
+    port="$($runtime port "$container_id" 80/tcp 2>/dev/null | awk -F: 'NR == 1 {print $NF}')"
+  fi
+
+  [ -n "$port" ] || return 1
+  echo "$port"
+}
+
+build_base_url() {
+  local host="$1"
+  local port="${2:-}"
+
+  if [ -n "$port" ] && [ "$port" != "80" ]; then
+    echo "http://$host:$port"
+    return 0
+  fi
+
+  echo "http://$host"
+}
+
 require_cmd curl
 
-A_BASE_URL="${A_BASE_URL:-http://microservice-a.127.0.0.1.nip.io}"
-B_BASE_URL="${B_BASE_URL:-http://microservice-b.127.0.0.1.nip.io}"
+INGRESS_PORT="${INGRESS_PORT:-}"
+
+if [ -z "$INGRESS_PORT" ]; then
+  INGRESS_PORT="$(detect_envoy_http_port || true)"
+fi
+
+A_BASE_URL="${A_BASE_URL:-$(build_base_url "microservice-a.127.0.0.1.nip.io" "$INGRESS_PORT")}"
+B_BASE_URL="${B_BASE_URL:-$(build_base_url "microservice-b.127.0.0.1.nip.io" "$INGRESS_PORT")}"
 ITERATIONS="${ITERATIONS:-30}"
 DELAY_SECONDS="${DELAY_SECONDS:-0.3}"
 
@@ -23,6 +75,9 @@ fi
 echo "Generating traces against:"
 echo "  microservice-a: $A_BASE_URL"
 echo "  microservice-b: $B_BASE_URL"
+if [ -n "$INGRESS_PORT" ]; then
+  echo "  ingress port: $INGRESS_PORT (auto-detected or overridden)"
+fi
 echo "  iterations: $ITERATIONS"
 echo "  delay: ${DELAY_SECONDS}s"
 

@@ -4,64 +4,103 @@ metadata:
   name: microservice-a-app
   namespace: apps
 data:
-  package.json: |
-    {
-      "name": "microservice-a",
-      "version": "1.0.0",
-      "private": true,
-      "dependencies": {
-        "@opentelemetry/api": "^1.9.0",
-        "@opentelemetry/auto-instrumentations-node": "^0.57.0",
-        "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
-        "@opentelemetry/resources": "^1.30.1",
-        "@opentelemetry/sdk-node": "^0.57.0",
-        "@opentelemetry/semantic-conventions": "^1.30.0"
-      }
-    }
-  otel.js: |
-    const { NodeSDK } = require("@opentelemetry/sdk-node");
-    const { getNodeAutoInstrumentations } = require("@opentelemetry/auto-instrumentations-node");
-    const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-http");
-    const { resourceFromAttributes } = require("@opentelemetry/resources");
-    const { SEMRESATTRS_SERVICE_NAME } = require("@opentelemetry/semantic-conventions");
-
-    const baseEndpoint =
-      process.env.OTEL_EXPORTER_OTLP_ENDPOINT ||
-      "http://otel-collector.monitoring.svc.cluster.local:4318";
-    const traceEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || `${baseEndpoint}/v1/traces`;
-
-    const sdk = new NodeSDK({
-      resource: resourceFromAttributes({
-        [SEMRESATTRS_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || "microservice-a",
-      }),
-      traceExporter: new OTLPTraceExporter({ url: traceEndpoint }),
-      instrumentations: [getNodeAutoInstrumentations()],
-    });
-
-    sdk.start();
-
-    process.on("SIGTERM", () => {
-      sdk.shutdown().finally(() => process.exit(0));
-    });
   app.js: |
     const http = require("http");
+    const crypto = require("crypto");
 
     const port = Number(process.env.PORT || 80);
     const serviceBUrl = process.env.SERVICE_B_URL || "http://service-b.apps.svc.cluster.local/";
+    const serviceName = process.env.OTEL_SERVICE_NAME || "microservice-a";
+    const otlpBase = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel-collector.monitoring.svc.cluster.local:4318";
+    const traceEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || `${otlpBase}/v1/traces`;
+
+    function randomHex(bytes) {
+      return crypto.randomBytes(bytes).toString("hex");
+    }
+
+    function parseTraceparent(value) {
+      if (!value) return null;
+      const m = value.match(/^00-([a-f0-9]{32})-([a-f0-9]{16})-[a-f0-9]{2}$/i);
+      if (!m) return null;
+      return { traceId: m[1].toLowerCase(), parentSpanId: m[2].toLowerCase() };
+    }
+
+    async function exportSpan({ name, traceId, spanId, parentSpanId, startNs, endNs, attrs }) {
+      const payload = {
+        resourceSpans: [
+          {
+            resource: {
+              attributes: [
+                { key: "service.name", value: { stringValue: serviceName } },
+              ],
+            },
+            scopeSpans: [
+              {
+                scope: { name: "manual-otlp" },
+                spans: [
+                  {
+                    traceId,
+                    spanId,
+                    parentSpanId,
+                    name,
+                    kind: 1,
+                    startTimeUnixNano: String(startNs),
+                    endTimeUnixNano: String(endNs),
+                    attributes: attrs,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      try {
+        await fetch(traceEndpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (_) {
+      }
+    }
+
+    function toAttr(key, value) {
+      return { key, value: { stringValue: String(value) } };
+    }
 
     const server = http.createServer(async (req, res) => {
+      const incoming = parseTraceparent(req.headers.traceparent);
+      const traceId = incoming?.traceId || randomHex(16);
+      const parentSpanId = incoming?.parentSpanId;
+      const spanId = randomHex(8);
+      const startNs = Date.now() * 1e6;
+
       if (req.url === "/healthz") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ status: "ok", service: "microservice-a" }));
+        const endNs = Date.now() * 1e6;
+        await exportSpan({
+          name: "GET /healthz",
+          traceId,
+          spanId,
+          parentSpanId,
+          startNs,
+          endNs,
+          attrs: [toAttr("http.method", "GET"), toAttr("http.target", "/healthz")],
+        });
         return;
       }
 
       if (req.url && req.url.startsWith("/call-b")) {
         try {
+          const childSpanId = randomHex(8);
+          const traceparent = `00-${traceId}-${childSpanId}-01`;
           const downstream = await fetch(serviceBUrl, {
             method: "GET",
             headers: {
               "x-origin-service": "microservice-a",
+              traceparent,
             },
           });
 
@@ -77,6 +116,22 @@ data:
               timestamp: new Date().toISOString(),
             })
           );
+
+          const endNs = Date.now() * 1e6;
+          await exportSpan({
+            name: "GET /call-b",
+            traceId,
+            spanId,
+            parentSpanId,
+            startNs,
+            endNs,
+            attrs: [
+              toAttr("http.method", "GET"),
+              toAttr("http.target", req.url),
+              toAttr("http.status_code", downstream.status),
+              toAttr("peer.service", "microservice-b"),
+            ],
+          });
         } catch (err) {
           res.writeHead(502, { "Content-Type": "application/json" });
           res.end(
@@ -86,6 +141,21 @@ data:
               details: err.message,
             })
           );
+
+          const endNs = Date.now() * 1e6;
+          await exportSpan({
+            name: "GET /call-b",
+            traceId,
+            spanId,
+            parentSpanId,
+            startNs,
+            endNs,
+            attrs: [
+              toAttr("http.method", "GET"),
+              toAttr("http.target", req.url),
+              toAttr("error", true),
+            ],
+          });
         }
         return;
       }
@@ -99,6 +169,17 @@ data:
           timestamp: new Date().toISOString(),
         })
       );
+
+      const endNs = Date.now() * 1e6;
+      await exportSpan({
+        name: "GET /",
+        traceId,
+        spanId,
+        parentSpanId,
+        startNs,
+        endNs,
+        attrs: [toAttr("http.method", "GET"), toAttr("http.target", req.url || "/")],
+      });
     });
 
     server.listen(port, () => {

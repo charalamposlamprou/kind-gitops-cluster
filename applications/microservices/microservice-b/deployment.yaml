@@ -25,9 +25,7 @@ spec:
         - name: node-app
           image: node:20-alpine
           workingDir: /app
-          command: ["sh", "-c"]
-          args:
-            - npm install --omit=dev && node -r ./otel.js app.js
+          command: ["node", "app.js"]
           ports:
             - name: http
               containerPort: 80
@@ -40,12 +38,6 @@ spec:
             - name: app-config
               mountPath: /app/app.js
               subPath: app.js
-            - name: app-config
-              mountPath: /app/package.json
-              subPath: package.json
-            - name: app-config
-              mountPath: /app/otel.js
-              subPath: otel.js
           resources:
             requests:
               cpu: 100m
@@ -60,7 +52,3 @@ spec:
             items:
               - key: app.js
                 path: app.js
-              - key: package.json
-                path: package.json
-              - key: otel.js
-                path: otel.js

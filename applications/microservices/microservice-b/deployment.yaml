@@ -22,26 +22,45 @@ spec:
         app.kubernetes.io/part-of: microservices
     spec:
       containers:
-        - name: nginx
-          image: nginx:alpine
+        - name: node-app
+          image: node:20-alpine
+          workingDir: /app
+          command: ["sh", "-c"]
+          args:
+            - npm install --omit=dev && node -r ./otel.js app.js
           ports:
             - name: http
               containerPort: 80
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: microservice-b
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.monitoring.svc.cluster.local:4318
           volumeMounts:
-            - name: index-html
-              mountPath: /usr/share/nginx/html/index.html
-              subPath: index.html
+            - name: app-config
+              mountPath: /app/app.js
+              subPath: app.js
+            - name: app-config
+              mountPath: /app/package.json
+              subPath: package.json
+            - name: app-config
+              mountPath: /app/otel.js
+              subPath: otel.js
           resources:
             requests:
-              cpu: 50m
-              memory: 32Mi
-            limits:
-              cpu: 200m
+              cpu: 100m
               memory: 128Mi
+            limits:
+              cpu: 400m
+              memory: 256Mi
       volumes:
-        - name: index-html
+        - name: app-config
           configMap:
-            name: microservice-b-html
+            name: microservice-b-app
             items:
-              - key: index.html
-                path: index.html
+              - key: app.js
+                path: app.js
+              - key: package.json
+                path: package.json
+              - key: otel.js
+                path: otel.js

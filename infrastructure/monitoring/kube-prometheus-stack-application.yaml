@@ -45,11 +45,10 @@ spec:
                   spanEndTimeShift: 10m
                   filterByTraceID: false
                   filterBySpanID: false
-                  customQuery: true
+                  customQuery: false
                   tags:
                     - key: service.name
                       value: service_name
-                  query: '{$$__tags}'
                 tracesToMetrics:
                   datasourceUid: prometheus
                   tags:

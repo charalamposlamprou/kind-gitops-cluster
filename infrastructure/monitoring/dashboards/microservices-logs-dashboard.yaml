@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microservices-logs-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Microservices"
+data:
+  microservices-logs.json: |
+    {
+      "title": "Microservices - Logs",
+      "uid": "microservices-logs",
+      "schemaVersion": 39,
+      "version": 1,
+      "tags": ["microservices", "loki"],
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "custom",
+            "label": "Service",
+            "query": "microservice-a,microservice-b",
+            "includeAll": true,
+            "allValue": "microservice-a|microservice-b",
+            "current": { "text": "All", "value": "$__all" },
+            "options": [
+              { "selected": true,  "text": "All",            "value": "$__all" },
+              { "selected": false, "text": "microservice-a", "value": "microservice-a" },
+              { "selected": false, "text": "microservice-b", "value": "microservice-b" }
+            ],
+            "multi": false,
+            "hide": 0,
+            "skipUrlSync": false
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Log Volume",
+          "type": "timeseries",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(count_over_time({service_name=~\"$service\"}[$__interval])) by (service_name)",
+              "legendFormat": "{{service_name}}",
+              "queryType": "range"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": { "lineWidth": 2, "fillOpacity": 10, "drawStyle": "bars", "barAlignment": 0 }
+            }
+          },
+          "options": { "tooltip": { "mode": "multi" } }
+        },
+        {
+          "id": 2,
+          "title": "microservice-a Logs",
+          "type": "logs",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 12, "w": 12, "x": 0, "y": 6 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{service_name=\"microservice-a\"}",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          }
+        },
+        {
+          "id": 3,
+          "title": "microservice-b Logs",
+          "type": "logs",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 12, "w": 12, "x": 12, "y": 6 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{service_name=\"microservice-b\"}",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          }
+        },
+        {
+          "id": 4,
+          "title": "All Services Logs",
+          "type": "logs",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 14, "w": 24, "x": 0, "y": 18 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{service_name=~\"$service\"}",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showLabels": true,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          }
+        }
+      ]
+    }

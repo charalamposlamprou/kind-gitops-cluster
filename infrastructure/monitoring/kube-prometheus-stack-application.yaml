@@ -29,6 +29,7 @@ spec:
               isDefault: false
               jsonData:
                 maxLines: 1000
+                logsVolumeEnabled: false
             - name: Tempo
               uid: tempo
               type: tempo
@@ -45,13 +46,11 @@ spec:
                   spanEndTimeShift: 10m
                   filterByTraceID: false
                   filterBySpanID: false
-                  customQuery: false
+                  customQuery: true
                   tags:
-                    - service.name
-                  mappedTags:
                     - key: service.name
                       value: service_name
-                  mapTagNamesEnabled: true
+                  query: '{service_name="$${__span.tags["service.name"]}"}'
                 tracesToMetrics:
                   datasourceUid: prometheus
                   tags:

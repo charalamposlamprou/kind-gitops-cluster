@@ -46,7 +46,10 @@ spec:
                   filterByTraceID: false
                   filterBySpanID: false
                   customQuery: true
-                  query: '{service_name="$${__span.tags["service.name"]}"}'
+                  tags:
+                    - key: service.name
+                      value: service_name
+                  query: '{$$__tags}'
                 tracesToMetrics:
                   datasourceUid: prometheus
                   tags:

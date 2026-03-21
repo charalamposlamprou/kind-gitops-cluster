@@ -47,8 +47,11 @@ spec:
                   filterBySpanID: false
                   customQuery: false
                   tags:
+                    - service.name
+                  mappedTags:
                     - key: service.name
                       value: service_name
+                  mapTagNamesEnabled: true
                 tracesToMetrics:
                   datasourceUid: prometheus
                   tags:

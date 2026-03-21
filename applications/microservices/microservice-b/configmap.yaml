@@ -68,6 +68,20 @@ data:
       return { key, value: { stringValue: String(value) } };
     }
 
+    function logRequest({ traceId, spanId, method, path, statusCode }) {
+      console.log(
+        JSON.stringify({
+          service: serviceName,
+          traceId,
+          spanId,
+          method,
+          path,
+          statusCode,
+          timestamp: new Date().toISOString(),
+        })
+      );
+    }
+
     const server = http.createServer(async (req, res) => {
       const incoming = parseTraceparent(req.headers.traceparent);
       const traceId = incoming?.traceId || randomHex(16);
@@ -78,6 +92,7 @@ data:
       if (req.url === "/healthz") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ status: "ok", service: "microservice-b" }));
+        logRequest({ traceId, spanId, method: req.method || "GET", path: "/healthz", statusCode: 200 });
         const endNs = Date.now() * 1e6;
         await exportSpan({
           name: "GET /healthz",
@@ -100,6 +115,7 @@ data:
           timestamp: new Date().toISOString(),
         })
       );
+      logRequest({ traceId, spanId, method: req.method || "GET", path: req.url || "/", statusCode: 200 });
 
       const endNs = Date.now() * 1e6;
       await exportSpan({

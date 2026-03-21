@@ -45,6 +45,10 @@ spec:
           enabled: false
         gateway:
           enabled: false
+        chunksCache:
+          enabled: false
+        resultsCache:
+          enabled: false
   syncPolicy:
     automated:
       prune: true

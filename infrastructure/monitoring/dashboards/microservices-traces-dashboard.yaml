@@ -65,7 +65,7 @@ data:
             {
               "refId": "A",
               "queryType": "traceql",
-              "query": "{resource.service.name=\"microservice-a\"} | duration > $min_duration",
+              "query": "{resource.service.name=\"microservice-a\"}",
               "limit": 20,
               "tableType": "traces"
             }
@@ -101,7 +101,7 @@ data:
             {
               "refId": "A",
               "queryType": "traceql",
-              "query": "{resource.service.name=\"microservice-b\"} | duration > $min_duration",
+              "query": "{resource.service.name=\"microservice-b\"}",
               "limit": 20,
               "tableType": "traces"
             }
@@ -137,7 +137,7 @@ data:
             {
               "refId": "A",
               "queryType": "traceql",
-              "query": "{resource.service.name=~\"$service\"} | duration > $min_duration",
+              "query": "{resource.service.name=~\"$service\"}",
               "limit": 50,
               "tableType": "traces"
             }

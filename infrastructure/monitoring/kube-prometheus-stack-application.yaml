@@ -29,7 +29,6 @@ spec:
               isDefault: false
               jsonData:
                 maxLines: 1000
-                logsVolumeEnabled: false
             - name: Tempo
               uid: tempo
               type: tempo

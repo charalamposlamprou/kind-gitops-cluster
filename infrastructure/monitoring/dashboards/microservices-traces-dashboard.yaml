@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microservices-traces-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Microservices"
+data:
+  microservices-traces.json: |
+    {
+      "title": "Microservices - Traces",
+      "uid": "microservices-traces",
+      "schemaVersion": 39,
+      "version": 1,
+      "tags": ["microservices", "tempo"],
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "custom",
+            "label": "Service",
+            "query": "microservice-a,microservice-b",
+            "includeAll": true,
+            "allValue": "microservice-a|microservice-b",
+            "current": { "text": "All", "value": "$__all" },
+            "options": [
+              { "selected": true,  "text": "All",            "value": "$__all" },
+              { "selected": false, "text": "microservice-a", "value": "microservice-a" },
+              { "selected": false, "text": "microservice-b", "value": "microservice-b" }
+            ],
+            "multi": false,
+            "hide": 0,
+            "skipUrlSync": false
+          },
+          {
+            "name": "min_duration",
+            "type": "custom",
+            "label": "Min Duration",
+            "query": "0ms,10ms,50ms,100ms,500ms",
+            "current": { "text": "0ms", "value": "0ms" },
+            "options": [
+              { "selected": true,  "text": "0ms",   "value": "0ms" },
+              { "selected": false, "text": "10ms",  "value": "10ms" },
+              { "selected": false, "text": "50ms",  "value": "50ms" },
+              { "selected": false, "text": "100ms", "value": "100ms" },
+              { "selected": false, "text": "500ms", "value": "500ms" }
+            ],
+            "multi": false,
+            "hide": 0
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 2,
+          "title": "microservice-a Traces",
+          "type": "table",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "gridPos": { "h": 12, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "queryType": "traceql",
+              "query": "{resource.service.name=\"microservice-a\"} | duration > $min_duration",
+              "limit": 20,
+              "tableType": "traces"
+            }
+          ],
+          "options": { "frameIndex": 0, "showHeader": true },
+          "fieldConfig": {
+            "defaults": { "custom": { "align": "auto" } },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "traceID" },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "Open in Explore",
+                        "url": "/explore?left=%7B%22datasource%22:%22tempo%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22queryType%22:%22traceql%22,%22query%22:%22${__value.raw}%22%7D%5D%7D"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": 3,
+          "title": "microservice-b Traces",
+          "type": "table",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "gridPos": { "h": 12, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "queryType": "traceql",
+              "query": "{resource.service.name=\"microservice-b\"} | duration > $min_duration",
+              "limit": 20,
+              "tableType": "traces"
+            }
+          ],
+          "options": { "frameIndex": 0, "showHeader": true },
+          "fieldConfig": {
+            "defaults": { "custom": { "align": "auto" } },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "traceID" },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "Open in Explore",
+                        "url": "/explore?left=%7B%22datasource%22:%22tempo%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22queryType%22:%22traceql%22,%22query%22:%22${__value.raw}%22%7D%5D%7D"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": 4,
+          "title": "All Services — Trace Search",
+          "type": "table",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "gridPos": { "h": 14, "w": 24, "x": 0, "y": 12 },
+          "targets": [
+            {
+              "refId": "A",
+              "queryType": "traceql",
+              "query": "{resource.service.name=~\"$service\"} | duration > $min_duration",
+              "limit": 50,
+              "tableType": "traces"
+            }
+          ],
+          "options": { "frameIndex": 0, "showHeader": true },
+          "fieldConfig": {
+            "defaults": { "custom": { "align": "auto" } }
+          }
+        }
+      ]
+    }

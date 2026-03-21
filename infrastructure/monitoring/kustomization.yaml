@@ -9,3 +9,4 @@ resources:
   - tempo-application.yaml
   - otel-collector-application.yaml
   - ingress-monitoring.yaml
+  - dashboards/

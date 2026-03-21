@@ -46,7 +46,7 @@ spec:
                   filterByTraceID: false
                   filterBySpanID: false
                   customQuery: true
-                  query: '{exporter="OTLP"} |= "apps_$${__span.tags["service.name"]}-"'
+                  query: '{service_name="$${__span.tags["service.name"]}"}'
                 tracesToMetrics:
                   datasourceUid: prometheus
                   tags:

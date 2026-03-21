@@ -48,13 +48,13 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum(count_over_time({exporter=\"OTLP\"} |= \"apps_microservice-a-\" [$__interval]))",
+              "expr": "sum(count_over_time({service_name=\"microservice-a\"} [$__interval]))",
               "legendFormat": "microservice-a",
               "queryType": "range"
             },
             {
               "refId": "B",
-              "expr": "sum(count_over_time({exporter=\"OTLP\"} |= \"apps_microservice-b-\" [$__interval]))",
+              "expr": "sum(count_over_time({service_name=\"microservice-b\"} [$__interval]))",
               "legendFormat": "microservice-b",
               "queryType": "range"
             }
@@ -76,7 +76,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "{exporter=\"OTLP\"} |= \"apps_microservice-a-\"",
+              "expr": "{service_name=\"microservice-a\"}",
               "queryType": "range"
             }
           ],
@@ -99,7 +99,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "{exporter=\"OTLP\"} |= \"apps_microservice-b-\"",
+              "expr": "{service_name=\"microservice-b\"}",
               "queryType": "range"
             }
           ],
@@ -122,7 +122,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "{exporter=\"OTLP\"} |= \"apps_microservice-\"",
+              "expr": "{service_name=~\"$service\"}",
               "queryType": "range"
             }
           ],

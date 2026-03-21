@@ -56,12 +56,21 @@ spec:
                 - /var/log/pods/monitoring_otel-collector*_*/otel-collector/*.log
               include_file_path: true
               start_at: end
+              operators:
+                - id: container-parser
+                  type: container
+                  add_metadata_from_filepath: true
           processors:
             memory_limiter:
               check_interval: 5s
               limit_mib: 256
               spike_limit_mib: 64
             batch: {}
+            transform/logs:
+              error_mode: ignore
+              log_statements:
+                - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.namespace.name"] == "apps" and resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
+                - replace_pattern(resource.attributes["service.name"], "-[^-]+-[^-]+$", "") where resource.attributes["k8s.namespace.name"] == "apps" and resource.attributes["service.name"] != nil
             resource/loki:
               attributes:
                 - action: insert
@@ -84,7 +93,7 @@ spec:
                 exporters: [otlp/tempo]
               logs:
                 receivers: [otlp, filelog]
-                processors: [memory_limiter, resource/loki, batch]
+                processors: [memory_limiter, transform/logs, resource/loki, batch]
                 exporters: [loki]
               metrics:
                 receivers: [otlp]

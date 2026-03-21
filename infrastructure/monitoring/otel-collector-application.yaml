@@ -57,20 +57,51 @@ spec:
               include_file_path: true
               start_at: end
               operators:
-                - id: container-parser
-                  type: container
-                  add_metadata_from_filepath: true
+                - type: regex_parser
+                  id: parser-containerd
+                  regex: '^(?P<time>[^ ^Z]+Z) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) (?P<log>.*)$'
+                  timestamp:
+                    parse_from: attributes.time
+                    layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+                - type: move
+                  from: attributes.stream
+                  to: attributes["log.iostream"]
+                - type: move
+                  from: attributes.log
+                  to: body
+                - type: regex_parser
+                  id: extract-metadata-from-filepath
+                  parse_from: attributes["log.file.path"]
+                  regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod_name>[^_]+)_(?P<uid>[a-f0-9\-]{36})\/(?P<container_name>[^\._]+)\/(?P<restart_count>\d+)\.log$'
+                - type: regex_parser
+                  id: extract-service-name
+                  parse_from: attributes.pod_name
+                  regex: '^(?P<service_name>.+?)(?:-[a-z0-9]+-[a-z0-9]+)?$'
+                  if: 'attributes.namespace == "apps"'
+                - type: move
+                  from: attributes.namespace
+                  to: resource["k8s.namespace.name"]
+                - type: move
+                  from: attributes.pod_name
+                  to: resource["k8s.pod.name"]
+                - type: move
+                  from: attributes.uid
+                  to: resource["k8s.pod.uid"]
+                - type: move
+                  from: attributes.container_name
+                  to: resource["k8s.container.name"]
+                - type: move
+                  from: attributes.restart_count
+                  to: resource["k8s.container.restart_count"]
+                - type: move
+                  from: attributes.service_name
+                  to: resource["service.name"]
           processors:
             memory_limiter:
               check_interval: 5s
               limit_mib: 256
               spike_limit_mib: 64
             batch: {}
-            transform/logs:
-              error_mode: ignore
-              log_statements:
-                - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.namespace.name"] == "apps" and resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
-                - replace_pattern(resource.attributes["service.name"], "-[^-]+-[^-]+$", "") where resource.attributes["k8s.namespace.name"] == "apps" and resource.attributes["service.name"] != nil
             resource/loki:
               attributes:
                 - action: insert
@@ -93,7 +124,7 @@ spec:
                 exporters: [otlp/tempo]
               logs:
                 receivers: [otlp, filelog]
-                processors: [memory_limiter, transform/logs, resource/loki, batch]
+                processors: [memory_limiter, resource/loki, batch]
                 exporters: [loki]
               metrics:
                 receivers: [otlp]

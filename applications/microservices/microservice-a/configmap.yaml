@@ -69,6 +69,21 @@ data:
       return { key, value: { stringValue: String(value) } };
     }
 
+    function logRequest({ traceId, spanId, method, path, statusCode, extra = {} }) {
+      console.log(
+        JSON.stringify({
+          service: serviceName,
+          traceId,
+          spanId,
+          method,
+          path,
+          statusCode,
+          ...extra,
+          timestamp: new Date().toISOString(),
+        })
+      );
+    }
+
     const server = http.createServer(async (req, res) => {
       const incoming = parseTraceparent(req.headers.traceparent);
       const traceId = incoming?.traceId || randomHex(16);
@@ -79,6 +94,7 @@ data:
       if (req.url === "/healthz") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ status: "ok", service: "microservice-a" }));
+        logRequest({ traceId, spanId, method: req.method || "GET", path: "/healthz", statusCode: 200 });
         const endNs = Date.now() * 1e6;
         await exportSpan({
           name: "GET /healthz",
@@ -116,6 +132,17 @@ data:
               timestamp: new Date().toISOString(),
             })
           );
+          logRequest({
+            traceId,
+            spanId,
+            method: req.method || "GET",
+            path: req.url,
+            statusCode: 200,
+            extra: {
+              downstreamService: "microservice-b",
+              downstreamStatus: downstream.status,
+            },
+          });
 
           const endNs = Date.now() * 1e6;
           await exportSpan({
@@ -141,6 +168,17 @@ data:
               details: err.message,
             })
           );
+          logRequest({
+            traceId,
+            spanId,
+            method: req.method || "GET",
+            path: req.url,
+            statusCode: 502,
+            extra: {
+              error: "downstream call failed",
+              details: err.message,
+            },
+          });
 
           const endNs = Date.now() * 1e6;
           await exportSpan({
@@ -169,6 +207,7 @@ data:
           timestamp: new Date().toISOString(),
         })
       );
+      logRequest({ traceId, spanId, method: req.method || "GET", path: req.url || "/", statusCode: 200 });
 
       const endNs = Date.now() * 1e6;
       await exportSpan({

@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [2.4.0] - 2026-04-01
+## [3.1.0] - 2026-04-01
 
 ### ✨ New Features
 
@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [2.3.1] - 2026-04-01
+## [3.0.1] - 2026-04-01
 
 ### 🐛 Bug Fixes
 

@@ -57,6 +57,12 @@ spec:
               value: /otel/node_modules
             - name: NODE_OPTIONS
               value: --require @opentelemetry/auto-instrumentations-node/register
+            - name: OTEL_NODE_RESOURCE_DETECTORS
+              value: env,host,os,process,container
+            - name: OTEL_METRICS_EXPORTER
+              value: none
+            - name: OTEL_LOGS_EXPORTER
+              value: none
           volumeMounts:
             - name: app-config
               mountPath: /app/app.js

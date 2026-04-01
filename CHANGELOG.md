@@ -4,7 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [2.3.1] - 2026-04-01
+## [3.1.0] - 2026-04-01
+
+### ✨ New Features
+
+- **Automatic instrumentation via OTel Node.js SDK**: Both microservices now use `@opentelemetry/auto-instrumentations-node` instead of hand-rolled OTLP spans.
+  - An `install-otel` init container runs `npm install @opentelemetry/auto-instrumentations-node` into an `emptyDir` volume (`/otel`) at pod startup.
+  - `NODE_OPTIONS=--require /otel/node_modules/@opentelemetry/auto-instrumentations-node/register` bootstraps the SDK before any app code runs.
+  - `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` ensures the SDK uses the existing OTLP HTTP endpoint on port 4318.
+  - The SDK automatically instruments Node.js `http` (incoming requests), `undici`/`fetch` (outgoing calls), and propagates W3C `traceparent` headers across service boundaries — no manual span creation required.
+  - All custom `exportSpan`, `parseTraceparent`, `randomHex`, `toAttr`, and `logRequest` code removed from both `app.js` ConfigMaps.
+
+### ⚠️ Notes
+
+- Pod startup time increases by ~30–60 s on first schedule per node while npm downloads packages. Subsequent restarts on the same node reuse the node image layer cache for npm itself but re-download packages (emptyDir is ephemeral).
+
+---
+
+## [3.0.1] - 2026-04-01
 
 ### 🐛 Bug Fixes
 

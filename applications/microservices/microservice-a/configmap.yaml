@@ -6,119 +6,23 @@ metadata:
 data:
   app.js: |
     const http = require("http");
-    const crypto = require("crypto");
 
     const port = Number(process.env.PORT || 80);
     const serviceBUrl = process.env.SERVICE_B_URL || "http://service-b.apps.svc.cluster.local/";
     const serviceName = process.env.OTEL_SERVICE_NAME || "microservice-a";
-    const otlpBase = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel-collector.monitoring.svc.cluster.local:4318";
-    const traceEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || `${otlpBase}/v1/traces`;
-
-    function randomHex(bytes) {
-      return crypto.randomBytes(bytes).toString("hex");
-    }
-
-    function parseTraceparent(value) {
-      if (!value) return null;
-      const m = value.match(/^00-([a-f0-9]{32})-([a-f0-9]{16})-[a-f0-9]{2}$/i);
-      if (!m) return null;
-      return { traceId: m[1].toLowerCase(), parentSpanId: m[2].toLowerCase() };
-    }
-
-    async function exportSpan({ name, traceId, spanId, parentSpanId, startNs, endNs, attrs, status }) {
-      const payload = {
-        resourceSpans: [
-          {
-            resource: {
-              attributes: [
-                { key: "service.name", value: { stringValue: serviceName } },
-              ],
-            },
-            scopeSpans: [
-              {
-                scope: { name: "manual-otlp" },
-                spans: [
-                  {
-                    traceId,
-                    spanId,
-                    parentSpanId,
-                    name,
-                    kind: 1,
-                    startTimeUnixNano: String(startNs),
-                    endTimeUnixNano: String(endNs),
-                    attributes: attrs,
-                    ...(status ? { status } : {}),
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      };
-
-      try {
-        await fetch(traceEndpoint, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } catch (_) {
-      }
-    }
-
-    function toAttr(key, value) {
-      return { key, value: { stringValue: String(value) } };
-    }
-
-    function logRequest({ traceId, spanId, method, path, statusCode, extra = {} }) {
-      console.log(
-        JSON.stringify({
-          service: serviceName,
-          traceId,
-          spanId,
-          method,
-          path,
-          statusCode,
-          ...extra,
-          timestamp: new Date().toISOString(),
-        })
-      );
-    }
 
     const server = http.createServer(async (req, res) => {
-      const incoming = parseTraceparent(req.headers.traceparent);
-      const traceId = incoming?.traceId || randomHex(16);
-      const parentSpanId = incoming?.parentSpanId;
-      const spanId = randomHex(8);
-      const startNs = Date.now() * 1e6;
-
       if (req.url === "/healthz") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ status: "ok", service: "microservice-a" }));
-        logRequest({ traceId, spanId, method: req.method || "GET", path: "/healthz", statusCode: 200 });
-        const endNs = Date.now() * 1e6;
-        await exportSpan({
-          name: "GET /healthz",
-          traceId,
-          spanId,
-          parentSpanId,
-          startNs,
-          endNs,
-          attrs: [toAttr("http.method", "GET"), toAttr("http.target", "/healthz")],
-        });
         return;
       }
 
       if (req.url && req.url.startsWith("/call-b")) {
         try {
-          const childSpanId = randomHex(8);
-          const traceparent = `00-${traceId}-${childSpanId}-01`;
           const downstream = await fetch(serviceBUrl, {
             method: "GET",
-            headers: {
-              "x-origin-service": "microservice-a",
-              traceparent,
-            },
+            headers: { "x-origin-service": serviceName },
           });
 
           const downstreamBody = await downstream.text();
@@ -133,33 +37,6 @@ data:
               timestamp: new Date().toISOString(),
             })
           );
-          logRequest({
-            traceId,
-            spanId,
-            method: req.method || "GET",
-            path: req.url,
-            statusCode: 200,
-            extra: {
-              downstreamService: "microservice-b",
-              downstreamStatus: downstream.status,
-            },
-          });
-
-          const endNs = Date.now() * 1e6;
-          await exportSpan({
-            name: "GET /call-b",
-            traceId,
-            spanId,
-            parentSpanId,
-            startNs,
-            endNs,
-            attrs: [
-              toAttr("http.method", "GET"),
-              toAttr("http.target", req.url),
-              toAttr("http.status_code", downstream.status),
-              toAttr("peer.service", "microservice-b"),
-            ],
-          });
         } catch (err) {
           res.writeHead(502, { "Content-Type": "application/json" });
           res.end(
@@ -169,33 +46,7 @@ data:
               details: err.message,
             })
           );
-          logRequest({
-            traceId,
-            spanId,
-            method: req.method || "GET",
-            path: req.url,
-            statusCode: 502,
-            extra: {
-              error: "downstream call failed",
-              details: err.message,
-            },
-          });
-
-          const endNs = Date.now() * 1e6;
-          await exportSpan({
-            name: "GET /call-b",
-            traceId,
-            spanId,
-            parentSpanId,
-            startNs,
-            endNs,
-            attrs: [
-              toAttr("http.method", "GET"),
-              toAttr("http.target", req.url),
-              toAttr("http.status_code", 502),
-            ],
-            status: { code: 2, message: err.message },
-          });
+          console.error(JSON.stringify({ service: serviceName, error: err.message, path: req.url, timestamp: new Date().toISOString() }));
         }
         return;
       }
@@ -209,18 +60,6 @@ data:
           timestamp: new Date().toISOString(),
         })
       );
-      logRequest({ traceId, spanId, method: req.method || "GET", path: req.url || "/", statusCode: 200 });
-
-      const endNs = Date.now() * 1e6;
-      await exportSpan({
-        name: "GET /",
-        traceId,
-        spanId,
-        parentSpanId,
-        startNs,
-        endNs,
-        attrs: [toAttr("http.method", "GET"), toAttr("http.target", req.url || "/")],
-      });
     });
 
     server.listen(port, () => {

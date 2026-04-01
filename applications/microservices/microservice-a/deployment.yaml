@@ -21,6 +21,21 @@ spec:
         app.kubernetes.io/name: microservice-a
         app.kubernetes.io/part-of: microservices
     spec:
+      initContainers:
+        - name: install-otel
+          image: node:20-alpine
+          command:
+            - npm
+            - install
+            - --prefix
+            - /otel
+            - --no-fund
+            - --no-audit
+            - --omit=dev
+            - "@opentelemetry/auto-instrumentations-node"
+          volumeMounts:
+            - name: otel-modules
+              mountPath: /otel
       containers:
         - name: node-app
           image: node:20-alpine
@@ -36,10 +51,16 @@ spec:
               value: http://otel-collector.monitoring.svc.cluster.local:4318
             - name: SERVICE_B_URL
               value: http://service-b.apps.svc.cluster.local/
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: NODE_OPTIONS
+              value: --require /otel/node_modules/@opentelemetry/auto-instrumentations-node/register
           volumeMounts:
             - name: app-config
               mountPath: /app/app.js
               subPath: app.js
+            - name: otel-modules
+              mountPath: /otel
           resources:
             requests:
               cpu: 100m
@@ -54,3 +75,5 @@ spec:
             items:
               - key: app.js
                 path: app.js
+        - name: otel-modules
+          emptyDir: {}

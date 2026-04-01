@@ -53,8 +53,10 @@ spec:
               value: http://service-b.apps.svc.cluster.local/
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: http/protobuf
+            - name: NODE_PATH
+              value: /otel/node_modules
             - name: NODE_OPTIONS
-              value: --require /otel/node_modules/@opentelemetry/auto-instrumentations-node/register
+              value: --require @opentelemetry/auto-instrumentations-node/register
           volumeMounts:
             - name: app-config
               mountPath: /app/app.js

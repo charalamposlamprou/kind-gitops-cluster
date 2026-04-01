@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.3.1] - 2026-04-01
+
+### 🐛 Bug Fixes
+
+- **Fix trace error visibility in Tempo**: Spans exported by microservice-a and microservice-b were missing the OTel `status` field, causing all spans to appear as successful in Grafana/Tempo regardless of actual errors.
+  - Added `status` parameter to `exportSpan()` in both microservices, spread into the OTLP span payload.
+  - microservice-a: catch block on `/call-b` now sets `status: { code: 2, message: err.message }` and `http.status_code: 502` instead of the custom `error: true` attribute (which Tempo ignores).
+  - microservice-b: main request handler wrapped in try/catch; unexpected errors now export a span with `status: { code: 2 }` and `http.status_code: 500`.
+  - Error spans are now visible in Grafana Tempo with Status: Error and can be queried via TraceQL `{ status = error }`.
+
+---
+
 ## [2.3.0] - 2026-03-21
 
 ### ✨ New Features

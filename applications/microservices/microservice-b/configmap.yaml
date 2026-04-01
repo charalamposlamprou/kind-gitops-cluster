@@ -24,7 +24,7 @@ data:
       return { traceId: m[1].toLowerCase(), parentSpanId: m[2].toLowerCase() };
     }
 
-    async function exportSpan({ name, traceId, spanId, parentSpanId, startNs, endNs, attrs }) {
+    async function exportSpan({ name, traceId, spanId, parentSpanId, startNs, endNs, attrs, status }) {
       const payload = {
         resourceSpans: [
           {
@@ -46,6 +46,7 @@ data:
                     startTimeUnixNano: String(startNs),
                     endTimeUnixNano: String(endNs),
                     attributes: attrs,
+                    ...(status ? { status } : {}),
                   },
                 ],
               },
@@ -106,27 +107,47 @@ data:
         return;
       }
 
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          service: "microservice-b",
-          path: req.url,
-          message: "hello from node",
-          timestamp: new Date().toISOString(),
-        })
-      );
-      logRequest({ traceId, spanId, method: req.method || "GET", path: req.url || "/", statusCode: 200 });
+      try {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            service: "microservice-b",
+            path: req.url,
+            message: "hello from node",
+            timestamp: new Date().toISOString(),
+          })
+        );
+        logRequest({ traceId, spanId, method: req.method || "GET", path: req.url || "/", statusCode: 200 });
 
-      const endNs = Date.now() * 1e6;
-      await exportSpan({
-        name: "GET /",
-        traceId,
-        spanId,
-        parentSpanId,
-        startNs,
-        endNs,
-        attrs: [toAttr("http.method", "GET"), toAttr("http.target", req.url || "/")],
-      });
+        const endNs = Date.now() * 1e6;
+        await exportSpan({
+          name: "GET /",
+          traceId,
+          spanId,
+          parentSpanId,
+          startNs,
+          endNs,
+          attrs: [toAttr("http.method", "GET"), toAttr("http.target", req.url || "/")],
+        });
+      } catch (err) {
+        if (!res.headersSent) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ service: "microservice-b", error: err.message }));
+        }
+        logRequest({ traceId, spanId, method: req.method || "GET", path: req.url || "/", statusCode: 500 });
+
+        const endNs = Date.now() * 1e6;
+        await exportSpan({
+          name: "GET /",
+          traceId,
+          spanId,
+          parentSpanId,
+          startNs,
+          endNs,
+          attrs: [toAttr("http.method", "GET"), toAttr("http.target", req.url || "/"), toAttr("http.status_code", 500)],
+          status: { code: 2, message: err.message },
+        });
+      }
     });
 
     server.listen(port, () => {

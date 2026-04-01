@@ -25,7 +25,7 @@ data:
       return { traceId: m[1].toLowerCase(), parentSpanId: m[2].toLowerCase() };
     }
 
-    async function exportSpan({ name, traceId, spanId, parentSpanId, startNs, endNs, attrs }) {
+    async function exportSpan({ name, traceId, spanId, parentSpanId, startNs, endNs, attrs, status }) {
       const payload = {
         resourceSpans: [
           {
@@ -47,6 +47,7 @@ data:
                     startTimeUnixNano: String(startNs),
                     endTimeUnixNano: String(endNs),
                     attributes: attrs,
+                    ...(status ? { status } : {}),
                   },
                 ],
               },
@@ -191,8 +192,9 @@ data:
             attrs: [
               toAttr("http.method", "GET"),
               toAttr("http.target", req.url),
-              toAttr("error", true),
+              toAttr("http.status_code", 502),
             ],
+            status: { code: 2, message: err.message },
           });
         }
         return;

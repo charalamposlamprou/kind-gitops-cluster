@@ -184,3 +184,28 @@ spec:
 
 - Always set `targetRevision: HEAD` for new services (not `test-1234`).
 - After creating the Application YAML, add it to `applications/kustomization.yaml` under `resources:`.
+
+## Blue-green promotion and rollback
+
+After a new version is deployed, Argo Rollouts keeps the preview (new) version running alongside the active (old) version until you explicitly promote it.
+
+```bash
+# Check rollout status
+kubectl argo rollouts status <name> -n apps
+
+# View rollout details and current step
+kubectl argo rollouts get rollout <name> -n apps --watch
+
+# Promote (cut traffic from active → preview)
+kubectl argo rollouts promote <name> -n apps
+
+# Abort and roll back to previous active version
+kubectl argo rollouts abort <name> -n apps
+kubectl argo rollouts undo <name> -n apps
+```
+
+What to watch in Argo CD during a rollout:
+- The Application shows `OutOfSync` briefly while the new ReplicaSet starts.
+- The preview pods appear first; active pods are replaced only after promotion.
+- If `selfHeal: true` triggers unexpectedly, verify no conflicting manual changes exist in the cluster.
+

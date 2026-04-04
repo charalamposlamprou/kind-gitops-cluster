@@ -80,6 +80,7 @@ Always use `ingressClassName: haproxy`. The monitoring and Argo CD ingresses fol
 
 | File | Applies to |
 |------|-----------|
+| [general.instructions.md](.github/instructions/general.instructions.md) | `**` (all files) |
 | [microservices.instructions.md](.github/instructions/microservices.instructions.md) | `applications/**` |
 | [infrastructure.instructions.md](.github/instructions/infrastructure.instructions.md) | `infrastructure/**` |
 | [monitoring.instructions.md](.github/instructions/monitoring.instructions.md) | `infrastructure/monitoring/**` |

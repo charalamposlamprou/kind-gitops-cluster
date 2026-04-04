@@ -85,7 +85,7 @@ Always use `ingressClassName: haproxy`. The monitoring and Argo CD ingresses fol
 | [monitoring.instructions.md](.github/instructions/monitoring.instructions.md) | `infrastructure/monitoring/**` |
 | [cluster.instructions.md](.github/instructions/cluster.instructions.md) | `infrastructure/cluster/**` |
 | [secrets.instructions.md](.github/instructions/secrets.instructions.md) | `**/*sealed*.yaml` + on-demand |
-| [ci.instructions.md](.github/instructions/ci.instructions.md) | `.github/workflows/**` |
+| [ci.instructions.md](.github/instructions/ci.instructions.md) | `.github/workflows/**` + `CHANGELOG.md` |
 
 ## Prompts (slash commands)
 

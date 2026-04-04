@@ -63,8 +63,25 @@ Always use `ingressClassName: haproxy`. The monitoring and Argo CD ingresses fol
 - **Pod startup latency**: The OTEL init container downloads npm packages on first schedule per node (~30–60 s). This is expected; subsequent pod starts on the same node are faster.
 - **Bootstrap is not idempotent on first run**: Run `make cluster-up` before `make bootstrap`. Argo CD must be healthy before applying the root app.
 
+## Git Workflow
+
+- Branch from `main`: `feature/<desc>`, `fix/<desc>`, `chore/<desc>`
+- All changes via Pull Request — never push directly to `main`
+- Use conventional commits: `feat:`, `fix:`, `chore:`, `perf:` — the release workflow auto-bumps semver on merge
+- CI runs `kubectl kustomize` + `kubeconform` on every PR; it must pass before merging
+
 ## Key Reference Docs
 
 - Access methods (nip.io, port-forward, NodePort): [docs/ACCESSING-APPS.md](../docs/ACCESSING-APPS.md)
 - Sealed Secrets usage: [infrastructure/sealed-secrets/README.md](../infrastructure/sealed-secrets/README.md)
 - cloud-provider-kind setup: [infrastructure/cloud-provider/README.md](../infrastructure/cloud-provider/README.md)
+
+## Instruction files (auto-loaded by Copilot)
+
+| File | Applies to |
+|------|-----------|
+| [microservices.instructions.md](.github/instructions/microservices.instructions.md) | `applications/**` |
+| [infrastructure.instructions.md](.github/instructions/infrastructure.instructions.md) | `infrastructure/**` |
+| [monitoring.instructions.md](.github/instructions/monitoring.instructions.md) | `infrastructure/monitoring/**` |
+| [secrets.instructions.md](.github/instructions/secrets.instructions.md) | on-demand (secrets) |
+| [ci.instructions.md](.github/instructions/ci.instructions.md) | `.github/workflows/**` |

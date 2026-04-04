@@ -45,7 +45,7 @@ Each microservice Argo CD Application lives in `applications/apps/<name>-applica
 ### OpenTelemetry auto-instrumentation
 Every microservice Rollout includes:
 - An `install-otel` init container that installs `@opentelemetry/auto-instrumentations-node` into an `emptyDir` volume at `/otel`
-- `NODE_OPTIONS=--require /otel/node_modules/@opentelemetry/auto-instrumentations-node/register`
+- `NODE_PATH=/otel/node_modules` + `NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register`
 - `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` pointing to `otel-collector.monitoring:4318`
 
 Do not add manual span instrumentation — the SDK handles HTTP in/out and W3C `traceparent` propagation automatically.

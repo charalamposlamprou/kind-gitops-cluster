@@ -83,5 +83,14 @@ Always use `ingressClassName: haproxy`. The monitoring and Argo CD ingresses fol
 | [microservices.instructions.md](.github/instructions/microservices.instructions.md) | `applications/**` |
 | [infrastructure.instructions.md](.github/instructions/infrastructure.instructions.md) | `infrastructure/**` |
 | [monitoring.instructions.md](.github/instructions/monitoring.instructions.md) | `infrastructure/monitoring/**` |
-| [secrets.instructions.md](.github/instructions/secrets.instructions.md) | on-demand (secrets) |
+| [cluster.instructions.md](.github/instructions/cluster.instructions.md) | `infrastructure/cluster/**` |
+| [secrets.instructions.md](.github/instructions/secrets.instructions.md) | `**/*sealed*.yaml` + on-demand |
 | [ci.instructions.md](.github/instructions/ci.instructions.md) | `.github/workflows/**` |
+
+## Prompts (slash commands)
+
+| Command | What it does |
+|---------|-------------|
+| `/add-microservice <name>` | Scaffolds all 6 microservice files + Argo CD Application |
+| `/add-infra-component <name>` | Scaffolds Argo CD Application + kustomization for a Helm chart |
+| `/add-dashboard <slug>` | Scaffolds a Grafana dashboard ConfigMap from JSON input |

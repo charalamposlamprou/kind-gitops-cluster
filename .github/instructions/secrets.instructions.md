@@ -1,5 +1,6 @@
 ---
 description: "Use when creating, handling, or reviewing Kubernetes Secrets in this repository. Covers Sealed Secrets workflow with kubeseal, naming conventions, and what must never be committed to Git."
+applyTo: "**/*sealed*.yaml"
 ---
 
 # Secrets Management

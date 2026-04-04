@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "osx": "bash .github/hooks/guard-kubectl-apply.sh",
+        "linux": "bash .github/hooks/guard-kubectl-apply.sh",
+        "timeout": 10
+      }
+    ]
+  }
+}

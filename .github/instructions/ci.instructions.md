@@ -1,6 +1,6 @@
 ---
-description: "Use when creating, editing, or reviewing GitHub Actions workflows under .github/workflows/. Covers the validation and release pipelines, conventional commit format, and branch strategy."
-applyTo: ".github/workflows/**"
+description: "Use when creating, editing, or reviewing GitHub Actions workflows under .github/workflows/, or when updating CHANGELOG.md. Covers the validation and release pipelines, conventional commit format, branch strategy, and changelog conventions."
+applyTo: ".github/workflows/**, CHANGELOG.md"
 ---
 
 # CI/CD Workflows
@@ -59,3 +59,59 @@ A release is only created when a PR is **merged to `main`** — direct pushes ar
 - Build or push container images (microservice code lives in ConfigMaps, no image build step needed)
 - Deploy to the cluster (Argo CD handles deployment from `main` via GitOps)
 - Run `make cluster-up` (cluster tests run locally with `make test-ingress` and `make test-otel`)
+
+## CHANGELOG.md
+
+`CHANGELOG.md` is maintained **manually** — the release workflow creates a Git tag and GitHub Release with auto-generated notes, but does not write to this file.
+
+### When to update
+
+Update `CHANGELOG.md` as part of the same PR that introduces the change — not after the fact.
+
+### Format
+
+Follow the existing sections in [CHANGELOG.md](../../CHANGELOG.md):
+
+```markdown
+## [<major>.<minor>.<patch>] - YYYY-MM-DD
+
+### ✨ New Features
+- **Short title**: Description of what changed and why.
+
+### 🐛 Bug Fixes
+- **Short title**: What was broken and how it was fixed.
+
+### 🛠 Infrastructure
+- Changes to infrastructure components, Helm versions, etc.
+
+### ⚠️ Notes
+- Breaking changes, migration steps, known caveats.
+```
+
+Only include sections that are relevant — omit empty ones.
+
+### Version number
+
+Determine the version by applying conventional commit rules to your changes:
+
+| Change type | Version bump |
+|---|---|
+| `feat:` | minor (x.**Y**.0) |
+| `fix:`, `perf:` | patch (x.y.**Z**) |
+| `chore:`, `docs:`, `ci:` | patch (x.y.**Z**) |
+| `BREAKING CHANGE` / `feat!:` | major (**X**.0.0) |
+
+Check the latest released tag to get the current version:
+```bash
+git tag --list 'v*' --sort=-v:refname | head -n 1
+```
+
+### Checking the latest GitHub release
+
+```bash
+# List recent tags
+git fetch --tags && git tag --list 'v*' --sort=-v:refname | head -5
+
+# Or view on GitHub
+open https://github.com/charalamposlamprou/kind-gitops-cluster/releases
+```

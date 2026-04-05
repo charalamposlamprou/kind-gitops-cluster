@@ -58,14 +58,14 @@ Always use `ingressClassName: haproxy`. The monitoring and Argo CD ingresses fol
 
 ## Pitfalls
 
-- **`targetRevision`**: Microservice Applications currently point to branch `test-1234`, not `HEAD`. When creating new applications, set `targetRevision: HEAD` unless intentionally targeting a feature branch.
+- **`targetRevision`**: Always set `targetRevision: HEAD` on new Argo CD Applications unless intentionally targeting a specific branch.
 - **Port changes**: The envoy LoadBalancer port changes every time the cluster is recreated. Always run `make urls` to get current URLs — never hardcode the port.
 - **Pod startup latency**: The OTEL init container downloads npm packages on first schedule per node (~30–60 s). This is expected; subsequent pod starts on the same node are faster.
 - **Bootstrap is not idempotent on first run**: Run `make cluster-up` before `make bootstrap`. Argo CD must be healthy before applying the root app.
 
 ## Git Workflow
 
-- Branch from `main`: `feature/<desc>`, `fix/<desc>`, `chore/<desc>`
+- Branch from `main` using **SDD task branches**: `DEVOPS-XXXX` (created automatically by `/specs`)
 - All changes via Pull Request — never push directly to `main`
 - Use conventional commits: `feat:`, `fix:`, `chore:`, `perf:` — the release workflow auto-bumps semver on merge
 - CI runs `kubectl kustomize` + `kubeconform` on every PR; it must pass before merging

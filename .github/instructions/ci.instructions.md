@@ -8,13 +8,13 @@ applyTo: ".github/workflows/**, CHANGELOG.md"
 ## Git workflow
 
 ```
-feature/<short-description>   ← develop here
-         ↓  Pull Request
-       main                   ← protected; all CI must pass before merge
+DEVOPS-XXXX   ← develop here (created by /specs slash command)
+      ↓  Pull Request
+    main      ← protected; all CI must pass before merge
 ```
 
 - **Never push directly to `main`**. All changes go through a PR.
-- Branch naming: `feature/<description>`, `fix/<description>`, `chore/<description>`
+- Branch naming: `DEVOPS-XXXX` where `XXXX` is the task number — created automatically by `/specs`
 - PRs targeting `main` trigger the `k8s-validation` workflow automatically.
 
 ## Conventional commits

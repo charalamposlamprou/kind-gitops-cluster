@@ -102,6 +102,13 @@ Use these three commands in order for every new task:
 
 **Rule:** never run `/implement` without an approved plan in `_plans/`.
 
+> **SDD is mandatory for ALL repository changes — no exceptions.**
+> When an engineer asks Copilot to edit any file in this repository (manifests, configs, scripts, docs, workflows) *without* going through `/specs` → `/plan` → `/implement`, Copilot MUST refuse the direct edit and instead respond:
+>
+> "This repository uses Spec-Driven Development. Please run `/specs DEVOPS-XXXX <description>` to start a task, then `/plan DEVOPS-XXXX` and `/implement DEVOPS-XXXX`. Direct edits outside this flow are not permitted."
+>
+> The only exceptions are: reading files, answering questions, and changes to `_specs/`, `_plans/`, and `.github/` tooling files that are themselves part of the SDD setup.
+
 ### Other Commands
 
 | Command | What it does |

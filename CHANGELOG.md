@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.2.0] - 2026-04-05
+
+### ✨ New Features
+
+- **Spec-Driven Development (SDD) workflow** (DEVOPS-0001): Introduced a structured spec → plan → implement workflow for all tasks in this repository.
+  - Three Copilot slash commands: `/specs DEVOPS-XXXX <description>`, `/plan DEVOPS-XXXX`, `/implement DEVOPS-XXXX`.
+  - `_specs/` and `_plans/` directories at repo root with `TEMPLATE.md` files for each stage.
+  - `validate-manifests` skill extracted from `/implement` — runs `kubectl kustomize` on all touched paths and blocks commits on failure.
+  - SDD workflow documented in `README.md` and registered in `.github/copilot-instructions.md`.
+  - Branch naming convention updated to `DEVOPS-XXXX`; `ci.instructions.md` updated to reflect this.
+
+### 🛠 Infrastructure
+
+- **Removed `validate-cluster` skill** (DEVOPS-0002): `.github/skills/validate-cluster/` deleted as its scope (runtime cluster health) is covered by `make test-ingress`, `make test-otel`, and `make argocd-status`. Manifest validation is now handled exclusively by the `validate-manifests` skill.
+
+---
+
 ## [3.1.0] - 2026-04-01
 
 ### ✨ New Features

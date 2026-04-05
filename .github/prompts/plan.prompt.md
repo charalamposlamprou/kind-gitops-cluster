@@ -15,6 +15,8 @@ You are generating an implementation plan for task **$ARGUMENTS**.
    - [.github/instructions/microservices.instructions.md](../instructions/microservices.instructions.md) (if applicable)
    - [.github/instructions/infrastructure.instructions.md](../instructions/infrastructure.instructions.md) (if applicable)
    - [.github/instructions/monitoring.instructions.md](../instructions/monitoring.instructions.md) (if applicable)
+   - [.github/instructions/ci.instructions.md](../instructions/ci.instructions.md) (if applicable — workflows, CHANGELOG, conventional commits)
+   - [.github/instructions/secrets.instructions.md](../instructions/secrets.instructions.md) (if applicable — any sensitive values or Sealed Secrets)
 
 3. **Generate `_plans/$ARGUMENTS.md`** using [_plans/TEMPLATE.md](../../_plans/TEMPLATE.md) as the structure. Fill every section:
    - **Branch** — `$ARGUMENTS`

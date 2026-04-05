@@ -102,11 +102,8 @@ Use these three commands in order for every new task:
 
 **Rule:** never run `/implement` without an approved plan in `_plans/`.
 
-### Infrastructure & Microservices
+### Other Commands
 
 | Command | What it does |
 |---------|-------------|
-| `/add-microservice <name>` | Scaffolds all 6 microservice files + Argo CD Application |
-| `/add-infra-component <name>` | Scaffolds Argo CD Application + kustomization for a Helm chart |
-| `/add-dashboard <slug>` | Scaffolds a Grafana dashboard ConfigMap from JSON input |
 | `/validate-cluster [name]` | End-to-end health check: Argo CD status, ingress, OTel pipeline |

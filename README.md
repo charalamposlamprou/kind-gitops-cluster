@@ -328,55 +328,6 @@ Grafana quick checks:
 2. In **Explore**, select `Tempo` and run a trace search.
 3. In **Explore**, select `Loki` and run `{namespace="monitoring"}` to confirm log ingestion.
 
-## 🛠️ Contributing — Spec-Driven Development (SDD)
-
-All changes to this repository follow a **Spec-Driven Development** workflow. Every task goes through three stages before a single file is touched.
-
-### Workflow
-
-```
-/specs DEVOPS-1234 <description>   →  branch created + spec generated
-/plan  DEVOPS-1234                 →  plan generated from spec
-/implement DEVOPS-1234             →  executes plan + validates manifests + stages diff
-```
-
-> **Rule:** never run `/implement` without an approved plan in `_plans/`.
-
-### Step by Step
-
-**1. Start a task**
-```
-/specs DEVOPS-1234 add microservice-c with a /health endpoint
-```
-Copilot creates branch `DEVOPS-1234` from `main` and writes `_specs/DEVOPS-1234.md`. Review the spec and edit any section if something is wrong or missing.
-
-**2. Generate the plan**
-```
-/plan DEVOPS-1234
-```
-Copilot reads the spec, analyses the codebase, and writes `_plans/DEVOPS-1234.md` listing every file to create/modify, ordered steps, and validation checks. Review the plan and approve or request changes before proceeding.
-
-**3. Implement**
-```
-/implement DEVOPS-1234
-```
-Copilot executes every step in the plan, runs `kubectl kustomize` on all touched paths, and stages the diff. Once kustomize validation passes, commit:
-```bash
-git add . && git commit -m "feat: add microservice-c (DEVOPS-1234)"
-```
-
-### Safeguards
-- `/specs` aborts if branch `DEVOPS-1234` already exists locally or remotely
-- `/implement` aborts if `_plans/DEVOPS-1234.md` does not exist
-- `/implement` warns if the branch already has commits ahead of `main`
-- `/implement` blocks the commit suggestion if any `kustomize build` fails
-
-### Directory layout
-```
-_specs/   ← spec files (source of truth for what to build)
-_plans/   ← plan files (auto-generated, reviewed before implementing)
-```
-
 ## 🧪 Testing LoadBalancer & Ingress
 
 This setup uses **cloud-provider-kind** to emulate cloud LoadBalancers (AWS ELB, GCP LB, Azure LB), providing a **production-like environment** locally.
@@ -659,6 +610,56 @@ All `make` targets are **safe to re-run**:
 ## 🤝 Contributing
 
 Contributions welcome! This is a reference implementation - feel free to fork and customize for your needs.
+
+## 🛠️ Contributing — Spec-Driven Development (SDD)
+
+All changes to this repository follow a **Spec-Driven Development** workflow. Every task goes through three stages before a single file is touched.
+
+### Workflow
+
+```
+/specs DEVOPS-1234 <description>   →  branch created + spec generated
+/plan  DEVOPS-1234                 →  plan generated from spec
+/implement DEVOPS-1234             →  executes plan + validates manifests + stages diff
+```
+
+> **Rule:** never run `/implement` without an approved plan in `_plans/`.
+
+### Step by Step
+
+**1. Start a task**
+```
+/specs DEVOPS-1234 add microservice-c with a /health endpoint
+```
+Copilot creates branch `DEVOPS-1234` from `main` and writes `_specs/DEVOPS-1234.md`. Review the spec and edit any section if something is wrong or missing.
+
+**2. Generate the plan**
+```
+/plan DEVOPS-1234
+```
+Copilot reads the spec, analyses the codebase, and writes `_plans/DEVOPS-1234.md` listing every file to create/modify, ordered steps, and validation checks. Review the plan and approve or request changes before proceeding.
+
+**3. Implement**
+```
+/implement DEVOPS-1234
+```
+Copilot executes every step in the plan, runs `kubectl kustomize` on all touched paths, and stages the diff. Once kustomize validation passes, commit:
+```bash
+git add . && git commit -m "feat: add microservice-c (DEVOPS-1234)"
+```
+
+### Safeguards
+- `/specs` aborts if branch `DEVOPS-1234` already exists locally or remotely
+- `/implement` aborts if `_plans/DEVOPS-1234.md` does not exist
+- `/implement` warns if the branch already has commits ahead of `main`
+- `/implement` blocks the commit suggestion if any `kustomize build` fails
+
+### Directory layout
+```
+_specs/   ← spec files (source of truth for what to build)
+_plans/   ← plan files (auto-generated, reviewed before implementing)
+```
+
 
 ## 📄 License
 

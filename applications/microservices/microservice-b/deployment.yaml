@@ -4,7 +4,7 @@ metadata:
   name: microservice-b
   namespace: apps
 spec:
-  replicas: 2
+  replicas: 4
   strategy:
     blueGreen:
       activeService: service-b

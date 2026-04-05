@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+### ⚙️ Operational
+
+- **microservice-b replicas scaled to 4** (DEVOPS-0004): Increased `spec.replicas` from 2 to 4 in the microservice-b Argo Rollout to increase throughput capacity.
+
+---
+
 ## [3.2.0] - 2026-04-05
 
 ### ✨ New Features

@@ -90,6 +90,20 @@ Always use `ingressClassName: haproxy`. The monitoring and Argo CD ingresses fol
 
 ## Prompts (slash commands)
 
+### Spec-Driven Development (SDD)
+
+Use these three commands in order for every new task:
+
+| Command | What it does |
+|---------|-------------|
+| `/specs DEVOPS-XXXX <description>` | Creates branch `DEVOPS-XXXX` from `main` and generates `_specs/DEVOPS-XXXX.md` from your description |
+| `/plan DEVOPS-XXXX` | Reads the spec and generates `_plans/DEVOPS-XXXX.md` with all files, steps, and validation |
+| `/implement DEVOPS-XXXX` | Executes the plan step by step; stages changes for engineer review |
+
+**Rule:** never run `/implement` without an approved plan in `_plans/`.
+
+### Infrastructure & Microservices
+
 | Command | What it does |
 |---------|-------------|
 | `/add-microservice <name>` | Scaffolds all 6 microservice files + Argo CD Application |

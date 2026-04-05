@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### ⚙️ Operational
 
+- **microservice-b replicas scaled down to 2** (DEVOPS-0005): Decreased `spec.replicas` from 4 to 2 in the microservice-b Argo Rollout, reverting the scale-up from DEVOPS-0004.
 - **microservice-b replicas scaled to 4** (DEVOPS-0004): Increased `spec.replicas` from 2 to 4 in the microservice-b Argo Rollout to increase throughput capacity.
 
 ---

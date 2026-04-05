@@ -107,3 +107,4 @@ Use these three commands in order for every new task:
 | Command | What it does |
 |---------|-------------|
 | `/validate-cluster [name]` | End-to-end health check: Argo CD status, ingress, OTel pipeline |
+| `validate-manifests [paths]` | Run `kubectl kustomize` on all touched paths; blocks on errors — called automatically by `/implement` |

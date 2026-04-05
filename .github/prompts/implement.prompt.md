@@ -33,15 +33,7 @@ Follow the **Implementation Steps** in `_plans/$ARGUMENTS.md` exactly, in order:
 
 When all steps and validation checks are done:
 
-1. **Validate all manifests with kustomize** — run `kustomize build` on every kustomization entrypoint touched by this task. At minimum always validate:
-   ```bash
-   kubectl kustomize applications/
-   kubectl kustomize infrastructure/
-   ```
-   If any additional kustomization paths were modified (e.g. `applications/microservices/<name>/`), run `kubectl kustomize` on those too.
-
-   - If `kustomize build` **fails** on any path, **do not proceed**. Fix the error, re-run the build, and only continue once all builds succeed.
-   - Tell the engineer which paths were validated and confirm they all passed.
+1. **Validate all manifests** — run the `validate-manifests` skill. Pass any sub-kustomization paths touched by this task as arguments (e.g. `applications/microservices/<name>/`). Do not proceed to step 2 until all paths pass.
 
 2. **Stage and summarise** the changes (do not commit — let the engineer review first):
    ```bash
